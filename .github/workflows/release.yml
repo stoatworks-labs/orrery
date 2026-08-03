@@ -91,7 +91,7 @@ jobs:
           if [ "${{ runner.os }}" = "macOS" ]; then
             cp -R "build/Orrery.ofx.bundle" "ofxout/Orrery.ofx.bundle"
             lipo -archs "ofxout/Orrery.ofx.bundle/Contents/MacOS/Orrery.ofx"
-            nm -gU "ofxout/Orrery.ofx.bundle/Contents/MacOS/Orrery.ofx" | grep -q "_OfxGetPlugin"
+            nm -gU "ofxout/Orrery.ofx.bundle/Contents/MacOS/Orrery.ofx" | grep "_OfxGetPlugin" >/dev/null
             codesign --force --sign - --timestamp=none "ofxout/Orrery.ofx.bundle"
           else
             mkdir -p "ofxout/Orrery.ofx.bundle/Contents/Win64"
