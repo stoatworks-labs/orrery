@@ -21,6 +21,21 @@ blend state.
 - Contact sheets: `./build/ortest --shapes /tmp/shapes.png --paths /tmp/paths.png`
 - Set anything by name: `--set "Path=1" --set "Count=0.5"`
 
+## OpenFX build
+- `source/ofx/OrreryOFX.cpp` → `build/Orrery.ofx.bundle` (target `OrreryOFX`,
+  `-DBUILD_OFX=OFF` to skip): **both** plugins in one bundle —
+  `com.stoatworks.orrery` (generator) and `com.stoatworks.orrerymask` (filter).
+- Motion.cpp is linked straight from source (still one home). The SDFs and the
+  blend rules are mirrored from the fragment shader — including the sdStar5
+  negation. Change the shader's distance functions or blends, change this too.
+- Sync offers Free and Manual only: OFX hosts carry no tempo. Manual is the
+  mode for keyframing Phase against the edit.
+- Smoke test (ofxprobe drives the Filter context; the generator's render runs
+  only in a real host):
+  `../resolume-ofx-bridge/build/ofxprobe --dir build --render com.stoatworks.orrerymask --size 640x360 --out /tmp/o.bmp`
+- OFX SDK subset (BSD-3) vendored under `external/openfx`.
+- Install for Resolve: copy the bundle into `/Library/OFX/Plugins`.
+
 ## Verify
 - Everything: `tools/verify.sh`
 - Where every shape landed, against `Motion.cpp`: `./build/ortest --motion`

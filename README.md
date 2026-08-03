@@ -51,6 +51,21 @@ All builds, checksums and release notes: [github.com/stoatworks-labs/orrery/rele
 
 <!-- downloads:end -->
 
+## OpenFX — Resolve, Vegas, Nuke, Natron
+
+The same effect also builds as an OpenFX plugin, so it runs in DaVinci Resolve
+(Edit and Color pages, and Fusion), Vegas Pro, Nuke and Natron. It is
+the identical motion — the OpenFX build links the same Motion.cpp the harness measures, and one bundle carries both plugins: the generator and Orrery Mask.
+
+Grab the `orrery-ofx-*` zip for your platform from the release and copy
+`Orrery.ofx.bundle` (both plugins are in the one bundle) into the standard OpenFX folder, then restart the host:
+
+```
+macOS    /Library/OFX/Plugins/
+Windows  C:\Program Files\Common Files\OFX\Plugins\
+```
+
+
 Both plugins are in every download — drop them into
 `~/Documents/Resolume Arena/Extra Effects` (or the Avenue equivalent) and restart
 Resolume. **The macOS build is not notarised**, so the first launch needs a
