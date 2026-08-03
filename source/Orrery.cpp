@@ -423,7 +423,7 @@ float OrreryPlugin::CurrentPhase() const
 	switch( sync )
 	{
 	case Sync::Free:
-		driven = static_cast< float >( hostTime ) * speed;
+		driven = static_cast< float >( hostSeconds ) * speed;
 		break;
 
 	case Sync::Beat:
@@ -448,7 +448,7 @@ float OrreryPlugin::CurrentPhase() const
 		//-------------------------------------------------------------------
 		const float tempo      = bpm > 1.0f ? bpm : 120.0f;
 		const float barSeconds = 240.0f / tempo;   // four beats to the bar
-		const float estimate   = static_cast< float >( hostTime ) / barSeconds;
+		const float estimate   = static_cast< float >( hostSeconds ) / barSeconds;
 		const float within     = Clamp01( barPhase );
 
 		const float bars = within + std::round( estimate - within );
@@ -471,17 +471,33 @@ float OrreryPlugin::CurrentPhase() const
 }
 
 //---------------------------------------------------------------------------
-// Audio
+// The clock, and audio
 //---------------------------------------------------------------------------
+void OrreryPlugin::UpdateClock()
+{
+	const double raw = hostTime;
+	if( clockScale == 0.0 && lastRawTime >= 0.0 && raw > lastRawTime )
+	{
+		const double d = raw - lastRawTime;
+		if( d >= 0.001 && d <= 0.5 )
+			clockScale = 1.0;
+		else if( d >= 2.0 && d <= 500.0 )
+			clockScale = 0.001;
+	}
+	lastRawTime = raw;
+	hostSeconds = raw * ( clockScale == 0.0 ? 1.0 : clockScale );
+}
+
 void OrreryPlugin::UpdateAudio()
 {
 	const ParamInfo* info = FindParamInfo( PT_AUDIO );
 	if( info == nullptr )
 		return;
 
-	// Frame delta for the release filter, off the same clock everything else
-	// runs on. First frame -- or a clock that has not moved -- snaps instead.
-	const double now = hostTime;
+	// Frame delta for the release filter, off the normalised clock UpdateClock
+	// just advanced, so the ms-vs-seconds question is already settled. First
+	// frame -- or a clock that has not moved -- snaps instead.
+	const double now = hostSeconds;
 	const double dt  = ( audioClock >= 0.0 && now > audioClock ) ? now - audioClock : 0.0;
 	audioClock       = now;
 
@@ -585,6 +601,7 @@ void OrreryPlugin::Render( int width, int height, GLuint inputTexture, float max
 	if( !backgroundShader.IsReady() || !shapeShader.IsReady() )
 		return;
 
+	UpdateClock();
 	UpdateAudio();
 
 	const MotionParams motion = CurrentMotion( width, height );
