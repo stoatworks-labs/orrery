@@ -23,8 +23,29 @@ chroma animations driving a pixel map.
 
 ## Download
 
-Prebuilt for macOS and Windows — see the
-[releases page](https://github.com/stoatworks-labs/orrery/releases).
+**[v0.1.0](https://github.com/stoatworks-labs/orrery/releases/tag/v0.1.0)** — prebuilt for macOS and Windows. Pick your platform:
+
+<details>
+<summary><b>macOS</b> — Universal (Apple Silicon + Intel)</summary>
+
+| Build | Download | Size |
+| --- | --- | --- |
+| Universal (Apple Silicon + Intel) · .dmg disk image | [`orrery-0.1.0-macos-universal.dmg`](https://github.com/stoatworks-labs/orrery/releases/download/v0.1.0/orrery-0.1.0-macos-universal.dmg) | 577 KB |
+| Universal (Apple Silicon + Intel) · .zip archive | [`orrery-macos-universal.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-macos-universal.zip) | 300 KB |
+
+</details>
+
+<details>
+<summary><b>Windows</b> — x64</summary>
+
+| Build | Download | Size |
+| --- | --- | --- |
+| x64 · .exe installer | [`orrery-0.1.0-windows-x86_64-setup.exe`](https://github.com/stoatworks-labs/orrery/releases/download/v0.1.0/orrery-0.1.0-windows-x86_64-setup.exe) | 212 KB |
+| x64 · .zip archive | [`orrery-windows-x86_64.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-windows-x86_64.zip) | 210 KB |
+
+</details>
+
+All builds, checksums and release notes: [github.com/stoatworks-labs/orrery/releases](https://github.com/stoatworks-labs/orrery/releases).
 
 <!-- downloads:end -->
 
