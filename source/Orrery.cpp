@@ -141,6 +141,9 @@ OrreryPlugin::OrreryPlugin( bool overInput ) :
 	params[ PT_MASK_MODE ] = static_cast< float >( MaskMode::Over );
 	params[ PT_MIX ]       = 1.0f;
 
+	params[ PT_AUDIO_SIZE ]   = 0.0f;
+	params[ PT_AUDIO_BRIGHT ] = 0.0f;
+
 	//-----------------------------------------------------------------------
 	// Declaration. This order is the order the host shows them in.
 	//-----------------------------------------------------------------------
@@ -222,6 +225,19 @@ OrreryPlugin::OrreryPlugin( bool overInput ) :
 		SetParamElementInfo( PT_PRESET, 1 + i, presets::kPresets[ i ].name, static_cast< float >( 1 + i ) );
 
 	//-----------------------------------------------------------------------
+	// Audio. PT_AUDIO is an FFT buffer: Resolume shows it as an audio-source
+	// picker and writes one spectrum bin per element, low frequencies first.
+	// The element defaults are zero on purpose -- with no audio routed the two
+	// knobs do nothing, rather than the shapes twitching to a phantom signal.
+	//-----------------------------------------------------------------------
+	SetBufferParamInfo( PT_AUDIO, "Audio", kMaxInstances, FF_USAGE_FFT );
+	for( int i = 0; i < kMaxInstances; ++i )
+		SetParamElementInfo( PT_AUDIO, i, "", 0.0f );
+
+	SetParamInfof( PT_AUDIO_SIZE, "Audio Size", FF_TYPE_STANDARD );
+	SetParamInfof( PT_AUDIO_BRIGHT, "Audio Bright", FF_TYPE_STANDARD );
+
+	//-----------------------------------------------------------------------
 	// Groups. Thirty-odd parameters in one flat list is how somebody else's
 	// inspector stops being readable. SetParamGroup collapses *runs* of
 	// same-group parameters, which is why the ids in Controls.h have to stay in
@@ -238,6 +254,8 @@ OrreryPlugin::OrreryPlugin( bool overInput ) :
 	for( unsigned int id = PT_MASK_MODE; id <= PT_MIX; ++id )
 		SetParamGroup( id, "Output" );
 	SetParamGroup( PT_PRESET, "Preset" );
+	for( unsigned int id = PT_AUDIO; id <= PT_AUDIO_BRIGHT; ++id )
+		SetParamGroup( id, "Audio" );
 }
 
 //---------------------------------------------------------------------------
@@ -453,6 +471,41 @@ float OrreryPlugin::CurrentPhase() const
 }
 
 //---------------------------------------------------------------------------
+// Audio
+//---------------------------------------------------------------------------
+void OrreryPlugin::UpdateAudio()
+{
+	const ParamInfo* info = FindParamInfo( PT_AUDIO );
+	if( info == nullptr )
+		return;
+
+	// Frame delta for the release filter, off the same clock everything else
+	// runs on. First frame -- or a clock that has not moved -- snaps instead.
+	const double now = hostTime;
+	const double dt  = ( audioClock >= 0.0 && now > audioClock ) ? now - audioClock : 0.0;
+	audioClock       = now;
+
+	// Fast up, slow down -- the same asymmetry as tinsel's temporal filter and
+	// for the same reason: a flash that arrives a frame late reads as broken,
+	// while one that takes ~150 ms to die away reads as intended. Symmetric
+	// smoothing would trade the flicker for lag on the attack, which is worse.
+	const float release = dt > 0.0 ? 1.0f - std::exp( static_cast< float >( -dt / 0.15 ) ) : 1.0f;
+
+	const size_t bins = std::min( info->elements.size(), audioLevel.size() );
+	for( size_t i = 0; i < bins; ++i )
+	{
+		// sqrt because bin magnitudes bunch near zero: a spectrum used raw
+		// leaves everything but the kick invisible.
+		const float raw = std::sqrt( std::max( 0.0f, info->elements[ i ].value ) );
+
+		if( raw >= audioLevel[ i ] )
+			audioLevel[ i ] = raw;
+		else
+			audioLevel[ i ] += ( raw - audioLevel[ i ] ) * release;
+	}
+}
+
+//---------------------------------------------------------------------------
 // Parameters to motion
 //---------------------------------------------------------------------------
 MotionParams OrreryPlugin::CurrentMotion( int width, int height ) const
@@ -487,6 +540,24 @@ MotionParams OrreryPlugin::CurrentMotion( int width, int height ) const
 	m.pulseBright = Clamp01( params[ PT_PULSE_BRIGHT ] );
 	m.pulseWidth  = PulseWidthFromParam( params[ PT_PULSE_WIDTH ] );
 
+	m.audioSize   = Clamp01( params[ PT_AUDIO_SIZE ] );
+	m.audioBright = Clamp01( params[ PT_AUDIO_BRIGHT ] );
+
+	// One broad band per instance rather than the first `count` bins: six
+	// shapes should carve the whole spectrum into six, not all sit on the
+	// bass. Instance order is band order, low frequencies first -- on a Grid
+	// that reads left-to-right as a spectrum analyser.
+	for( int i = 0; i < m.count; ++i )
+	{
+		const int lo = i * kMaxInstances / m.count;
+		const int hi = std::max( lo + 1, ( i + 1 ) * kMaxInstances / m.count );
+
+		float sum = 0.0f;
+		for( int b = lo; b < hi; ++b )
+			sum += audioLevel[ static_cast< size_t >( b ) ];
+		m.audio[ static_cast< size_t >( i ) ] = sum / static_cast< float >( hi - lo );
+	}
+
 	m.colourMode = static_cast< ColourMode >( Option( params[ PT_COLOUR_MODE ], static_cast< int >( ColourMode::Count ) ) );
 	m.r          = Clamp01( params[ PT_SHAPE_R ] );
 	m.g          = Clamp01( params[ PT_SHAPE_G ] );
@@ -513,6 +584,8 @@ void OrreryPlugin::Render( int width, int height, GLuint inputTexture, float max
 {
 	if( !backgroundShader.IsReady() || !shapeShader.IsReady() )
 		return;
+
+	UpdateAudio();
 
 	const MotionParams motion = CurrentMotion( width, height );
 	Solve( motion, instances );

@@ -135,6 +135,16 @@ enum ParamId : unsigned int
 	// composition refers to — do not shift under existing users.
 	PT_PRESET,
 
+	// Audio. Appended for the same reason: these arrived after v0.1.0
+	// shipped, and inserting them next to Pulse — where they belong — would
+	// renumber every id after them in every saved composition. PT_AUDIO is an
+	// FFT buffer (FF_TYPE_BUFFER, FF_USAGE_FFT): Resolume shows it as an
+	// audio-source picker and writes one spectrum bin per element. FFGL only;
+	// OFX hosts have no audio analysis and never see these.
+	PT_AUDIO,
+	PT_AUDIO_SIZE,
+	PT_AUDIO_BRIGHT,
+
 	PT_COUNT
 };
 

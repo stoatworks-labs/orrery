@@ -277,6 +277,15 @@ Instance SolveOne( const MotionParams& p, int index )
 	scale *= Mix( 1.0f, env, p.pulse );
 
 	//-----------------------------------------------------------------------
+	// Audio. The band arrives already smoothed (Orrery.h owns the filter), so
+	// this is pure arithmetic like everything else here. Size grows rather
+	// than modulates about 1: the quiet state is the shape the operator set,
+	// and the music only ever adds.
+	//-----------------------------------------------------------------------
+	const float band = p.audio[ static_cast< size_t >( index ) % p.audio.size() ];
+	scale *= 1.0f + p.audioSize * 2.0f * band;
+
+	//-----------------------------------------------------------------------
 	// Colour.
 	//-----------------------------------------------------------------------
 	float r = 1.0f;
@@ -327,7 +336,7 @@ Instance SolveOne( const MotionParams& p, int index )
 		break;
 	}
 
-	float alpha = p.opacity * Mix( 1.0f, env, p.pulseBright );
+	float alpha = p.opacity * Mix( 1.0f, env, p.pulseBright ) * Mix( 1.0f, band, p.audioBright );
 
 	out.x        = x;
 	out.y        = y;

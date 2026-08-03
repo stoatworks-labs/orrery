@@ -293,6 +293,19 @@ bool applySetting( OrreryPlugin& plugin, const std::string& assignment )
 //---------------------------------------------------------------------------
 void render( OrreryPlugin& plugin, const Target& target, GLuint input = 0 )
 {
+	// A synthetic spectrum, written the way the host writes one: one value per
+	// element of the Audio buffer. Without it the two Audio knobs measurably
+	// do nothing offline, and the sweep would report them dead. A fixed shape
+	// rather than anything time-driven, so renders stay reproducible:
+	// bass-heavy like programme material, with a ripple so neighbouring
+	// per-instance bands differ.
+	for( int bin = 0; bin < kMaxInstances; ++bin )
+	{
+		const float across = static_cast< float >( bin ) / static_cast< float >( kMaxInstances - 1 );
+		const float level  = 0.7f * ( 1.0f - across ) * ( 1.0f - across ) + 0.2f * ( 0.5f + 0.5f * std::sin( 25.0f * across ) );
+		plugin.SetParamElementValue( PT_AUDIO, static_cast< unsigned int >( bin ), level );
+	}
+
 	glBindFramebuffer( GL_FRAMEBUFFER, target.fbo );
 	glViewport( 0, 0, target.width, target.height );
 	glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
@@ -440,6 +453,8 @@ int listParameters( OrreryPlugin& plugin )
 			typeName = "colour";
 		else if( type == FF_TYPE_TEXT )
 			typeName = "text";
+		else if( type == FF_TYPE_BUFFER )
+			typeName = "buffer";
 
 		printf( "%-4u %-20s %-10s %.4f\n", i, name != nullptr ? name : "?", typeName,
 		        plugin.GetFloatParameter( i ) );

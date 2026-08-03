@@ -106,6 +106,20 @@ the track with no separate code path. Set it to `Manual` and the Phase parameter
 becomes the only driver — hand it to Resolume's own BPM-synced animation, a
 keyframe, or a MIDI fader.
 
+## Audio
+
+The **Audio** group (FFGL only — OFX hosts have no audio analysis) takes
+Resolume's FFT directly: pick an audio source on the `Audio` parameter, and
+every shape gets its own slice of the spectrum, low frequencies first.
+`Audio Size` grows each shape with its band; `Audio Bright` fades quiet shapes
+towards nothing. On a `Grid` with `Audio Bright` up, the shapes *are* a
+spectrum analyser — and because the bands arrive per instance, this is the one
+thing Resolume's own per-parameter audio link cannot do: that link moves one
+slider for the whole plugin, this moves sixty-four shapes independently.
+
+The bands are smoothed fast-up, slow-down (~150 ms release), so a hit lands
+the frame it happens and dies away like a meter rather than flickering.
+
 ## Shapes
 
 ![The eight primitives](docs/shapes.png)

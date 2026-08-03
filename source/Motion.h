@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <vector>
 
@@ -176,6 +177,15 @@ struct MotionParams
 	float pulse       = 0.0f;
 	float pulseBright = 0.0f;
 	float pulseWidth  = 0.5f;
+
+	/// Audio. `audio[i]` is instance i's level, 0..1, already smoothed -- the
+	/// FFGL side fills it from the host's FFT, one broad band per instance,
+	/// low frequencies first; the OFX side leaves it dark. `audioSize` grows a
+	/// shape with its band, `audioBright` fades a quiet shape towards nothing
+	/// -- which is what turns a Grid of shapes into a spectrum analyser.
+	float audioSize   = 0.0f;
+	float audioBright = 0.0f;
+	std::array< float, kMaxInstances > audio = {};
 
 	ColourMode colourMode = ColourMode::White;
 	float r = 1.0f;

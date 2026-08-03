@@ -99,6 +99,12 @@ CONTEXT = {
 # Parameters that need the host clock running rather than a pinned phase.
 NEEDS_CLOCK = {"Speed", "Sync"}
 
+# Parameter *kinds* that have no scalar value to sweep. "Audio" is an FFT
+# buffer: its float value is meaningless, so sweeping it proves nothing and
+# reports a false dead. ortest feeds every render a synthetic spectrum, and the
+# two Audio knobs are the sweepable proof that the buffer is wired through.
+SKIP_KINDS = {"buffer"}
+
 # The values every non-option parameter is swept across.
 #
 # The awkward numbers are load-bearing, and 0, 0.5, 1 is a trap. **An evenly
@@ -208,6 +214,8 @@ def main():
 
         for effect in (False, True):
             for name, kind in parameters(ortest, effect):
+                if kind in SKIP_KINDS:
+                    continue
                 if effect and name not in EFFECT_ONLY:
                     continue
                 if not effect and name in EFFECT_ONLY:

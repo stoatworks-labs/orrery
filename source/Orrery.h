@@ -105,6 +105,20 @@ private:
 
 	float params[ PT_COUNT ] = {};
 
+	//---------------------------------------------------------------------
+	// Audio.
+	//
+	// The host writes one spectrum bin per element of PT_AUDIO; UpdateAudio
+	// runs them through an attack/release filter into `audioLevel`, and
+	// CurrentMotion resamples that per instance. The smoothing lives here and
+	// not in Motion because Motion is a pure function of its parameters --
+	// state would cost it that, and everything the harness proves about it.
+	//---------------------------------------------------------------------
+	void UpdateAudio();
+
+	std::array< float, kMaxInstances > audioLevel = {};
+	double audioClock = -1.0;
+
 	bool phasePinned    = false;
 	float pinnedPhase   = 0.0f;
 
