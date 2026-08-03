@@ -27,6 +27,7 @@
 
 #include "../Controls.h"
 #include "../Motion.h"
+#include "../Presets.h"
 #include "../Shapes.h"
 
 namespace
@@ -79,6 +80,7 @@ constexpr const char* kParamBackOpacity = "backOpacity";
 constexpr const char* kParamBlend       = "blend";
 constexpr const char* kParamMaskMode    = "maskMode";
 constexpr const char* kParamMix         = "mix";
+constexpr const char* kParamPreset      = "preset";
 
 //---------------------------------------------------------------------------
 // Distance functions — the CPU mirror of the fragment shader's. All
@@ -537,6 +539,112 @@ public:
 			maskMode = fetchChoiceParam( kParamMaskMode );
 			mix      = fetchDoubleParam( kParamMix );
 		}
+		preset = fetchChoiceParam( kParamPreset );
+	}
+
+	void changedParam( const OFX::InstanceChangedArgs& args, const std::string& paramName ) override
+	{
+		using namespace orrery::presets;
+
+		if( paramName == kParamPreset )
+		{
+			int chosen = 0;
+			preset->getValue( chosen );
+			if( chosen <= 0 || chosen > kCount || applyingPreset )
+				return;
+
+			// The copy IS the preset — same table as the FFGL build, same 0..1
+			// space. One edit block so undo takes the whole preset back at once.
+			// The null checks matter: the mask variant has no background params.
+			const Preset& p = kPresets[ chosen - 1 ];
+			applyingPreset  = true;
+			beginEditBlock( "Preset" );
+			setChoice( shape, p.v[ kShape ] );
+			setDouble( instances, p.v[ kInstances ] );
+			setDouble( size, p.v[ kSize ] );
+			setDouble( sizeVary, p.v[ kSizeVary ] );
+			setDouble( stretch, p.v[ kStretch ] );
+			setDouble( roundness, p.v[ kRoundness ] );
+			setDouble( outline, p.v[ kOutline ] );
+			setDouble( softness, p.v[ kSoftness ] );
+			setChoice( path, p.v[ kPath ] );
+			setDouble( speed, p.v[ kSpeed ] );
+			setDouble( spread, p.v[ kSpread ] );
+			setDouble( scatter, p.v[ kScatter ] );
+			setDouble( pathSize, p.v[ kPathSize ] );
+			setDouble( ratioX, p.v[ kRatioX ] );
+			setDouble( ratioY, p.v[ kRatioY ] );
+			setDouble( direction, p.v[ kDirection ] );
+			setDouble( gridCols, p.v[ kGridCols ] );
+			setDouble( gridRows, p.v[ kGridRows ] );
+			setDouble( spin, p.v[ kSpin ] );
+			setDouble( spinPhase, p.v[ kSpinPhase ] );
+			setDouble( pulse, p.v[ kPulse ] );
+			setDouble( pulseBright, p.v[ kPulseBright ] );
+			setDouble( pulseWidth, p.v[ kPulseWidth ] );
+			setChoice( colourMode, p.v[ kColourMode ] );
+			setRGB( colour, p.v[ kShapeR ], p.v[ kShapeG ], p.v[ kShapeB ] );
+			setDouble( hueSpread, p.v[ kHueSpread ] );
+			setDouble( opacity, p.v[ kOpacity ] );
+			setRGB( backColour, p.v[ kBackR ], p.v[ kBackG ], p.v[ kBackB ] );
+			setDouble( backOpacity, p.v[ kBackOpacity ] );
+			setChoice( blend, p.v[ kBlend ] );
+			endEditBlock();
+			applyingPreset = false;
+			return;
+		}
+
+		// Editing a covered control while a preset is active hands control back
+		// to the sliders. Judged by value, not by the change reason: hosts are
+		// not consistent about reasons, but "still equal to the preset" is
+		// unambiguous and also absorbs the host echoing our own setValues.
+		if( applyingPreset || args.reason == OFX::eChangeTime )
+			return;
+
+		int active = 0;
+		preset->getValue( active );
+		if( active <= 0 || active > kCount )
+			return;
+
+		const Preset& p    = kPresets[ active - 1 ];
+		const bool covered =
+			( paramName == kParamShape && choiceDiffers( shape, p.v[ kShape ] ) ) ||
+			( paramName == kParamInstances && doubleDiffers( instances, p.v[ kInstances ] ) ) ||
+			( paramName == kParamSize && doubleDiffers( size, p.v[ kSize ] ) ) ||
+			( paramName == kParamSizeVary && doubleDiffers( sizeVary, p.v[ kSizeVary ] ) ) ||
+			( paramName == kParamStretch && doubleDiffers( stretch, p.v[ kStretch ] ) ) ||
+			( paramName == kParamRoundness && doubleDiffers( roundness, p.v[ kRoundness ] ) ) ||
+			( paramName == kParamOutline && doubleDiffers( outline, p.v[ kOutline ] ) ) ||
+			( paramName == kParamSoftness && doubleDiffers( softness, p.v[ kSoftness ] ) ) ||
+			( paramName == kParamPath && choiceDiffers( path, p.v[ kPath ] ) ) ||
+			( paramName == kParamSpeed && doubleDiffers( speed, p.v[ kSpeed ] ) ) ||
+			( paramName == kParamSpread && doubleDiffers( spread, p.v[ kSpread ] ) ) ||
+			( paramName == kParamScatter && doubleDiffers( scatter, p.v[ kScatter ] ) ) ||
+			( paramName == kParamPathSize && doubleDiffers( pathSize, p.v[ kPathSize ] ) ) ||
+			( paramName == kParamRatioX && doubleDiffers( ratioX, p.v[ kRatioX ] ) ) ||
+			( paramName == kParamRatioY && doubleDiffers( ratioY, p.v[ kRatioY ] ) ) ||
+			( paramName == kParamDirection && doubleDiffers( direction, p.v[ kDirection ] ) ) ||
+			( paramName == kParamGridCols && doubleDiffers( gridCols, p.v[ kGridCols ] ) ) ||
+			( paramName == kParamGridRows && doubleDiffers( gridRows, p.v[ kGridRows ] ) ) ||
+			( paramName == kParamSpin && doubleDiffers( spin, p.v[ kSpin ] ) ) ||
+			( paramName == kParamSpinPhase && doubleDiffers( spinPhase, p.v[ kSpinPhase ] ) ) ||
+			( paramName == kParamPulse && doubleDiffers( pulse, p.v[ kPulse ] ) ) ||
+			( paramName == kParamPulseBright && doubleDiffers( pulseBright, p.v[ kPulseBright ] ) ) ||
+			( paramName == kParamPulseWidth && doubleDiffers( pulseWidth, p.v[ kPulseWidth ] ) ) ||
+			( paramName == kParamColourMode && choiceDiffers( colourMode, p.v[ kColourMode ] ) ) ||
+			( paramName == kParamColour && rgbDiffers( colour, p.v[ kShapeR ], p.v[ kShapeG ], p.v[ kShapeB ] ) ) ||
+			( paramName == kParamHueSpread && doubleDiffers( hueSpread, p.v[ kHueSpread ] ) ) ||
+			( paramName == kParamOpacity && doubleDiffers( opacity, p.v[ kOpacity ] ) ) ||
+			( paramName == kParamBackColour && rgbDiffers( backColour, p.v[ kBackR ], p.v[ kBackG ], p.v[ kBackB ] ) ) ||
+			( paramName == kParamBackOpacity && doubleDiffers( backOpacity, p.v[ kBackOpacity ] ) ) ||
+			( paramName == kParamBlend && choiceDiffers( blend, p.v[ kBlend ] ) );
+
+		if( covered )
+		{
+			applyingPreset = true;
+			preset->setValue( 0 );
+			applyingPreset = false;
+		}
 	}
 
 	void render( const OFX::RenderArguments& args ) override
@@ -788,6 +896,55 @@ private:
 	OFX::ChoiceParam* blend        = nullptr;
 	OFX::ChoiceParam* maskMode     = nullptr;
 	OFX::DoubleParam* mix          = nullptr;
+	OFX::ChoiceParam* preset       = nullptr;
+
+	// The preset table is plain floats; these give each param type its
+	// reading of one. Option values are element indices, booleans are 0/1.
+	// Null-tolerant, because the two variants declare different subsets.
+	static bool doubleDiffers( OFX::DoubleParam* p, float v )
+	{
+		if( !p )
+			return false;
+		double current = 0.0;
+		p->getValue( current );
+		return std::fabs( current - double( v ) ) > 1e-4;
+	}
+	static bool choiceDiffers( OFX::ChoiceParam* p, float v )
+	{
+		if( !p )
+			return false;
+		int current = 0;
+		p->getValue( current );
+		return current != int( std::lround( v ) );
+	}
+	static bool rgbDiffers( OFX::RGBParam* p, float r, float g, float b )
+	{
+		if( !p )
+			return false;
+		double cr = 0.0, cg = 0.0, cb = 0.0;
+		p->getValue( cr, cg, cb );
+		return std::fabs( cr - double( r ) ) > 1e-4 || std::fabs( cg - double( g ) ) > 1e-4
+			   || std::fabs( cb - double( b ) ) > 1e-4;
+	}
+	static void setDouble( OFX::DoubleParam* p, float v )
+	{
+		if( doubleDiffers( p, v ) )
+			p->setValue( double( v ) );
+	}
+	static void setChoice( OFX::ChoiceParam* p, float v )
+	{
+		if( choiceDiffers( p, v ) )
+			p->setValue( int( std::lround( v ) ) );
+	}
+	static void setRGB( OFX::RGBParam* p, float r, float g, float b )
+	{
+		if( rgbDiffers( p, r, g, b ) )
+			p->setValue( double( r ), double( g ), double( b ) );
+	}
+
+	/// True while our own setValues are in flight, so the resulting
+	/// changedParam callbacks are not mistaken for the operator editing.
+	bool applyingPreset = false;
 };
 
 OFX::DoubleParamDescriptor* defineSlider( OFX::ImageEffectDescriptor& desc, OFX::PageParamDescriptor* page,
@@ -828,6 +985,21 @@ void describeParams( OFX::ImageEffectDescriptor& desc, bool maskVariant )
 	using namespace orrery;
 
 	OFX::PageParamDescriptor* page = desc.definePageParam( "Controls" );
+
+	// Factory presets, from the same table the FFGL build reads (Presets.h).
+	// Custom is not a preset: it means the sliders are the truth.
+	OFX::ChoiceParamDescriptor* presetParam = desc.defineChoiceParam( kParamPreset );
+	presetParam->setLabels( "Preset", "Preset", "Preset" );
+	presetParam->setHint( "Named motions. Picking one sets the covered controls; editing any "
+	                      "of them afterwards falls back to Custom." );
+	presetParam->appendOption( "Custom" );
+	for( int i = 0; i < orrery::presets::kCount; ++i )
+		presetParam->appendOption( orrery::presets::kPresets[ i ].name );
+	presetParam->setDefault( 0 );
+	presetParam->setIsPersistant( true );
+	presetParam->setEvaluateOnChange( false );//the copied values re-render; the label itself does not
+	presetParam->setAnimates( false );
+	page->addChild( *presetParam );
 
 	OFX::GroupParamDescriptor* shapeGroup = desc.defineGroupParam( "Shape" );
 	shapeGroup->setLabels( "Shape", "Shape", "Shape" );

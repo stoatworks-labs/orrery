@@ -6,6 +6,7 @@
 
 #include "Controls.h"
 #include "Motion.h"
+#include "Presets.h"
 #include "Shapes.h"
 
 /**
@@ -73,6 +74,20 @@ public:
 	void SetPhaseOverride( float phase );
 
 private:
+	/// The ParamId each presets::Param drives, in presets::Param order. The
+	/// preset table stays host-agnostic; this is the FFGL binding of it.
+	static constexpr unsigned int kPresetParamIDs[ presets::kParamCount ] = {
+		PT_SHAPE, PT_INSTANCES, PT_SIZE, PT_SIZE_VARY, PT_STRETCH, PT_ROUNDNESS, PT_OUTLINE, PT_SOFTNESS,
+		PT_PATH, PT_SPEED, PT_SPREAD, PT_SCATTER, PT_PATH_SIZE, PT_RATIO_X, PT_RATIO_Y, PT_DIRECTION,
+		PT_GRID_COLS, PT_GRID_ROWS, PT_SPIN, PT_SPIN_PHASE, PT_PULSE, PT_PULSE_BRIGHT, PT_PULSE_WIDTH,
+		PT_COLOUR_MODE, PT_SHAPE_R, PT_SHAPE_G, PT_SHAPE_B, PT_HUE_SPREAD, PT_OPACITY,
+		PT_BACK_R, PT_BACK_G, PT_BACK_B, PT_BACK_OPACITY, PT_BLEND
+	};
+
+	/// Copy a factory preset's values into params[] and raise value events so
+	/// the host re-reads the sliders. `presetIndex` is 1-based; 0 is Custom.
+	void applyPreset( int presetIndex );
+
 	bool BuildShaders();
 
 	/// Phase, in cycles, for the current parameters and host state.

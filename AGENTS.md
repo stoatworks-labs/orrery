@@ -233,3 +233,30 @@ transport.
 Related: [downpour](https://github.com/stoatworks-labs/downpour) (the CMake,
 harness and Diag patterns came from there), old-cathode, porthole,
 resolume-luma-keyer, asciify.
+
+## Factory presets
+
+`source/Presets.h` is one table of named looks in the host-facing 0..1
+parameter space, and it drives **both** builds — the FFGL constructor and the
+OFX describe each read it, so a preset cannot drift between Resolume and
+Resolve. Element 0 of the dropdown is always **Custom**, which is not in the
+table: it means "the sliders are the truth".
+
+The mechanics are deliberately copy-based. Picking a preset copies the table
+row into the real parameters — the FFGL side raises `FF_EVENT_FLAG_VALUE` per
+changed parameter so the host re-reads its sliders, the OFX side setValues
+inside one edit block so undo takes the whole preset back at once. A host that
+ignores the events still renders the preset correctly and merely shows stale
+knobs. Editing any covered parameter afterwards flips the dropdown back to
+Custom — judged by comparing values, not by the change reason, so a host
+echoing our own writes cannot un-set the preset.
+
+A preset covers shape, motion, pulse and colour. It leaves alone Sync (the
+FFGL build offers beat modes the OFX build cannot, so an index would mean
+different things in different hosts), Phase, Centre, Seed, Mask Mode and Mix.
+The OFX helpers are null-tolerant because the mask variant has no background
+parameters.
+
+Verified by rendering a preset and its hand-set equivalent through the offline
+harness and `ofxprobe --edit` (which delivers the set as a real user edit,
+with `kOfxActionInstanceChanged`) and comparing byte-for-byte.

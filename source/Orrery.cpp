@@ -212,6 +212,15 @@ OrreryPlugin::OrreryPlugin( bool overInput ) :
 
 	SetParamInfof( PT_MIX, "Mix", FF_TYPE_STANDARD );
 
+	// Factory presets. Element 0 is Custom; picking anything else copies that
+	// preset's values into the covered parameters and raises value events so
+	// the host re-reads the sliders. Editing a covered slider flips back to
+	// Custom.
+	SetOptionParamInfo( PT_PRESET, "Preset", 1 + presets::kCount, params[ PT_PRESET ] );
+	SetParamElementInfo( PT_PRESET, 0, "Custom", 0.0f );
+	for( int i = 0; i < presets::kCount; ++i )
+		SetParamElementInfo( PT_PRESET, 1 + i, presets::kPresets[ i ].name, static_cast< float >( 1 + i ) );
+
 	//-----------------------------------------------------------------------
 	// Groups. Thirty-odd parameters in one flat list is how somebody else's
 	// inspector stops being readable. SetParamGroup collapses *runs* of
@@ -228,6 +237,7 @@ OrreryPlugin::OrreryPlugin( bool overInput ) :
 		SetParamGroup( id, "Colour" );
 	for( unsigned int id = PT_MASK_MODE; id <= PT_MIX; ++id )
 		SetParamGroup( id, "Output" );
+	SetParamGroup( PT_PRESET, "Preset" );
 }
 
 //---------------------------------------------------------------------------
@@ -310,8 +320,58 @@ FFResult OrreryPlugin::SetFloatParameter( unsigned int index, float value )
 	if( index >= PT_COUNT )
 		return FF_FAIL;
 
-	params[ index ] = value;
+	if( index == PT_PRESET )
+	{
+		const int chosen = static_cast< int >( std::lround( value ) );
+		if( chosen != static_cast< int >( std::lround( params[ PT_PRESET ] ) ) )
+			applyPreset( chosen );
+		return FF_SUCCESS;
+	}
+
+	// A slider moved while a preset is active means the operator has taken
+	// over: the dropdown falls back to Custom. The equality guard matters —
+	// hosts that honour the value events echo the preset's own values straight
+	// back through here, and that echo must not un-set the preset.
+	const float previous = params[ index ];
+	params[ index ]      = value;
+
+	const int active = static_cast< int >( std::lround( params[ PT_PRESET ] ) );
+	if( active > 0 && std::fabs( value - previous ) > 1e-4f )
+	{
+		for( unsigned int id : kPresetParamIDs )
+		{
+			if( id == index )
+			{
+				params[ PT_PRESET ] = 0.0f;
+				RaiseParamEvent( PT_PRESET, FF_EVENT_FLAG_VALUE );
+				break;
+			}
+		}
+	}
+
 	return FF_SUCCESS;
+}
+
+void OrreryPlugin::applyPreset( int presetIndex )
+{
+	params[ PT_PRESET ] = static_cast< float >( presetIndex );
+
+	if( presetIndex <= 0 || presetIndex > presets::kCount )
+		return;//Custom: the sliders keep whatever they said
+
+	const presets::Preset& preset = presets::kPresets[ presetIndex - 1 ];
+	for( int j = 0; j < presets::kParamCount; ++j )
+	{
+		const unsigned int id = kPresetParamIDs[ j ];
+		if( std::fabs( params[ id ] - preset.v[ j ] ) <= 1e-6f )
+			continue;
+
+		// The copy is what changes the picture; the event only tells the host
+		// to re-read the slider. A host that ignores it renders the preset
+		// correctly and merely shows stale knobs.
+		params[ id ] = preset.v[ j ];
+		RaiseParamEvent( id, FF_EVENT_FLAG_VALUE );
+	}
 }
 
 float OrreryPlugin::GetFloatParameter( unsigned int index )
