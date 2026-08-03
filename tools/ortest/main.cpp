@@ -905,6 +905,207 @@ int contactSheet( const std::string& path, bool byShape )
 	return 0;
 }
 
+//---------------------------------------------------------------------------
+// --sequence
+//---------------------------------------------------------------------------
+//
+// A cue sheet, so the project video is the real plugin being *operated* rather
+// than a mock-up or a screen recording:
+//
+//     12.0        Shape=1              set at a time
+//     4.0..9.0    Count=0.3..0.7       ramp between two times
+//
+// Times are seconds on the video's own clock, which is also the host clock
+// handed to the plugin -- so a cue at 12s is the frame you see at 12s.
+//
+// The phase is deliberately NOT pinned here. The plugin runs off the host clock
+// exactly as it does in Resolume, which is the only way the video can honestly
+// show Speed and Sync doing anything.
+//
+struct Cue
+{
+	double from = 0.0;
+	double to   = 0.0;
+	std::string name;
+	float first  = 0.0f;
+	float second = 0.0f;
+	bool ramp    = false;
+};
+
+bool parseCues( const std::string& path, std::vector< Cue >& cues )
+{
+	FILE* file = fopen( path.c_str(), "rb" );
+	if( file == nullptr )
+	{
+		fprintf( stderr, "cannot open cue sheet %s\n", path.c_str() );
+		return false;
+	}
+
+	char line[ 1024 ];
+	int number = 0;
+	while( fgets( line, sizeof( line ), file ) != nullptr )
+	{
+		++number;
+		std::string text = line;
+
+		const size_t hash = text.find( '#' );
+		if( hash != std::string::npos )
+			text = text.substr( 0, hash );
+
+		const size_t firstReal = text.find_first_not_of( " \t\r\n" );
+		if( firstReal == std::string::npos )
+			continue;
+		text = text.substr( firstReal );
+
+		const size_t split = text.find_first_of( " \t" );
+		if( split == std::string::npos )
+			continue;
+
+		const std::string when = text.substr( 0, split );
+		std::string assignment = text.substr( split );
+
+		const size_t assignStart = assignment.find_first_not_of( " \t" );
+		if( assignStart == std::string::npos )
+			continue;
+		assignment = assignment.substr( assignStart );
+		while( !assignment.empty() && ( assignment.back() == '\n' || assignment.back() == '\r'
+		                                || assignment.back() == ' ' || assignment.back() == '\t' ) )
+			assignment.pop_back();
+
+		Cue cue;
+		const size_t timeRange = when.find( ".." );
+		if( timeRange != std::string::npos )
+		{
+			cue.from = std::strtod( when.substr( 0, timeRange ).c_str(), nullptr );
+			cue.to   = std::strtod( when.substr( timeRange + 2 ).c_str(), nullptr );
+			cue.ramp = true;
+		}
+		else
+		{
+			cue.from = cue.to = std::strtod( when.c_str(), nullptr );
+		}
+
+		const size_t equals = assignment.find( '=' );
+		if( equals == std::string::npos )
+		{
+			fprintf( stderr, "%s:%d: expected Name=value\n", path.c_str(), number );
+			fclose( file );
+			return false;
+		}
+
+		cue.name                = assignment.substr( 0, equals );
+		const std::string value = assignment.substr( equals + 1 );
+
+		const size_t valueRange = value.find( ".." );
+		if( cue.ramp && valueRange != std::string::npos )
+		{
+			cue.first  = std::strtof( value.substr( 0, valueRange ).c_str(), nullptr );
+			cue.second = std::strtof( value.substr( valueRange + 2 ).c_str(), nullptr );
+		}
+		else
+		{
+			cue.first = cue.second = std::strtof( value.c_str(), nullptr );
+			cue.ramp  = false;
+		}
+
+		cues.push_back( cue );
+	}
+
+	fclose( file );
+	return true;
+}
+
+int renderSequence( const std::string& directory, const std::string& cuePath,
+                    int width, int height, double seconds, double fps, bool effect )
+{
+	std::vector< Cue > cues;
+	if( !cuePath.empty() && !parseCues( cuePath, cues ) )
+		return 1;
+
+	OrreryPlugin plugin( effect );
+	if( !prepare( plugin, width, height ) )
+		return 1;
+
+	// Every cue is checked against the real parameter list before a single frame
+	// is rendered. A typo in a name would otherwise be a cue that silently never
+	// fires, and the only symptom would be a video that is subtly less
+	// interesting than the sheet says it is.
+	const std::map< std::string, unsigned int > byName = parameterIndex( plugin );
+	for( const Cue& cue : cues )
+	{
+		if( byName.find( cue.name ) == byName.end() )
+		{
+			fprintf( stderr, "cue names '%s', which is not a parameter\n", cue.name.c_str() );
+			return 1;
+		}
+	}
+
+	Target target = makeTarget( width, height );
+	const GLuint clip = effect ? makeTestClip( width, height ) : 0;
+
+	const int frames = static_cast< int >( seconds * fps + 0.5 );
+	int written      = 0;
+
+	for( int frame = 0; frame < frames; ++frame )
+	{
+		const double now = static_cast< double >( frame ) / fps;
+
+		// Apply every cue whose window has started. Cues are applied in file
+		// order each frame rather than tracked as state, so a later cue on the
+		// same parameter simply wins -- which is what reading the sheet top to
+		// bottom would lead you to expect.
+		for( const Cue& cue : cues )
+		{
+			if( now < cue.from )
+				continue;
+
+			float value = cue.second;
+			if( cue.ramp && now < cue.to && cue.to > cue.from )
+			{
+				const double t = ( now - cue.from ) / ( cue.to - cue.from );
+				// Smoothstep rather than linear. A parameter that starts and
+				// stops abruptly reads as a jump cut even when the value in
+				// between is right.
+				const double eased = t * t * ( 3.0 - 2.0 * t );
+				value = static_cast< float >( cue.first + ( cue.second - cue.first ) * eased );
+			}
+
+			plugin.SetFloatParameter( byName.at( cue.name ), value );
+		}
+
+		// The host clock and a steady 120bpm transport, so Sync has something
+		// real to lock to.
+		plugin.SetTime( now );
+		plugin.SetBeatInfo( 120.0f, static_cast< float >( std::fmod( now / 2.0, 1.0 ) ) );
+
+		render( plugin, target, clip );
+
+		char path[ 1024 ];
+		snprintf( path, sizeof( path ), "%s/frame%05d.png", directory.c_str(), frame );
+
+		const std::vector< unsigned char > image = flipRows( readBytes( target ), width, height );
+		if( !writePng( path, width, height, image ) )
+		{
+			fprintf( stderr, "could not write %s\n", path );
+			releaseTarget( target );
+			return 1;
+		}
+
+		++written;
+		if( written % 60 == 0 )
+			printf( "  %d / %d frames\n", written, frames );
+	}
+
+	releaseTarget( target );
+	if( clip != 0 )
+		glDeleteTextures( 1, &clip );
+	plugin.DeInitGL();
+
+	printf( "wrote %d frames to %s at %g fps (%.1f seconds)\n", written, directory.c_str(), fps,
+	        written / fps );
+	return 0;
+}
+
 void usage()
 {
 	printf( "ortest -- the Orrery offline harness\n\n"
@@ -919,7 +1120,11 @@ void usage()
 	        "  --phase P         pin the phase (default 0)\n"
 	        "  --time T          drive the host clock instead of pinning\n"
 	        "  --size WxH        output size (default 1280x720)\n"
-	        "  --set Name=value  set any parameter by name, repeatable\n" );
+	        "  --set Name=value  set any parameter by name, repeatable\n"
+	        "  --sequence DIR    render a cue-sheet driven frame sequence\n"
+	        "  --script FILE     the cue sheet (with --sequence)\n"
+	        "  --seconds S       sequence length (default 45)\n"
+	        "  --fps F           sequence frame rate (default 30)\n" );
 }
 
 } // namespace
@@ -927,6 +1132,8 @@ void usage()
 int main( int argc, char** argv )
 {
 	std::string outPath;
+	std::string sequenceDir;
+	std::string scriptPath;
 	std::string shapesPath;
 	std::string pathsPath;
 	std::vector< std::string > settings;
@@ -937,8 +1144,10 @@ int main( int argc, char** argv )
 	bool wantMask   = false;
 	bool wantEffect = false;
 
-	float phase    = 0.0f;
-	float hostTime = -1.0f;   // negative means "pin the phase instead"
+	float phase     = 0.0f;
+	float hostTime  = -1.0f;   // negative means "pin the phase instead"
+	double seconds  = 45.0;
+	double fps      = 30.0;
 	int width      = 1280;
 	int height     = 720;
 
@@ -949,6 +1158,14 @@ int main( int argc, char** argv )
 
 		if( arg == "--out" && hasNext )
 			outPath = argv[ ++i ];
+		else if( arg == "--sequence" && hasNext )
+			sequenceDir = argv[ ++i ];
+		else if( arg == "--script" && hasNext )
+			scriptPath = argv[ ++i ];
+		else if( arg == "--seconds" && hasNext )
+			seconds = std::stod( argv[ ++i ] );
+		else if( arg == "--fps" && hasNext )
+			fps = std::stod( argv[ ++i ] );
 		else if( arg == "--shapes" && hasNext )
 			shapesPath = argv[ ++i ];
 		else if( arg == "--paths" && hasNext )
@@ -992,7 +1209,8 @@ int main( int argc, char** argv )
 		}
 	}
 
-	if( outPath.empty() && shapesPath.empty() && pathsPath.empty() && !wantList && !wantMotion && !wantRound && !wantMask )
+	if( outPath.empty() && sequenceDir.empty() && shapesPath.empty() && pathsPath.empty()
+	    && !wantList && !wantMotion && !wantRound && !wantMask )
 	{
 		usage();
 		return 2;
@@ -1021,6 +1239,9 @@ int main( int argc, char** argv )
 
 	if( wantMask )
 		status |= maskCheck();
+
+	if( !sequenceDir.empty() )
+		status |= renderSequence( sequenceDir, scriptPath, width, height, seconds, fps, wantEffect );
 
 	if( !shapesPath.empty() )
 		status |= contactSheet( shapesPath, true );

@@ -1,0 +1,132 @@
+# The project video, as a cue sheet.
+#
+# Every frame is the real plugin rendering through the real FFGL sequence -- this
+# is the generator being *operated*, not a mock-up. Render with:
+#
+#   ./build/ortest --sequence /tmp/or-frames --script tools/video.cues \
+#                  --size 1920x1080 --seconds 45 --fps 30
+#
+# Syntax: `T Name=V` sets at a time, `T1..T2 Name=V1..V2` ramps between two
+# (eased, because a parameter that starts and stops abruptly reads as a cut).
+#
+# Every value here is the 0..1 the host sees, not the physical quantity -- see
+# Controls.h for why there is no other kind. The physical value each one lands on
+# is in the comment where it matters.
+#
+# The order of the piece is the order of the argument: a mask first, because that
+# is the simplest thing it does; then what the shapes can be; then where they can
+# go; and the pixel-map grid last, because that is the thing worth staying for.
+
+# ------------------------------------------------------------ 0s: a mask
+# White circles on black, orbiting. No colour yet, nothing clever -- this is
+# what somebody wants at 2am when they need a moving mask and do not want to
+# open an animation package.
+0.0   Path=0
+0.0   Shape=0
+0.0   Colour Mode=0
+0.0   Speed=0.52
+0.0   Size=0.66
+0.0   Path Size=0.50
+0.0   Spread=1.0
+0.0   Background Opacity=1.0
+
+# Open on three and fill in, so the first thing the eye gets is a chase it can
+# count rather than a crowd.
+0.0..6.0    Count=0.20..0.40
+
+# ------------------------------------------------- 6s: colour, and the chase
+# Hue Spread is the parameter that turns a mask into a pixel-map chase, so it
+# gets its own moment before anything else moves.
+6.0   Colour Mode=2
+6.0   Hue Spread=1.0
+6.0..11.0   Count=0.40..0.52
+6.0..11.0   Size=0.66..0.60
+
+# --------------------------------------------------------- 12s: the shapes
+# Cuts, not ramps: Shape is a dropdown and pretending otherwise would be a lie
+# about what the control does.
+12.0  Shape=1
+13.5  Shape=2
+15.0  Shape=3
+16.5  Shape=4
+
+# The outline rides across the shape changes to show it is one control that
+# works on all of them, not eight sets of geometry.
+12.0..15.0  Outline=0.0..0.30
+15.0..18.0  Outline=0.30..0.0
+12.0..18.0  Spin=0.50..0.62
+
+# ------------------------------------------------------ 18s: Lissajous
+# Two ratios, and a path that stops repeating the moment they are not whole
+# numbers. Ramping Ratio X off 3 is the whole point of the section.
+18.0  Path=1
+18.0  Shape=0
+18.0  Spin=0.50
+# 1:2 -- a figure of eight -- and NOT the 3:2 this section first used.
+#
+# A Lissajous is a curve, and the shapes are point samples of it, so the figure
+# is only legible while consecutive instances are close enough together to read
+# as a line. The arc length grows with the ratios, and at 3:2 even all 64
+# instances land as a scatter of dots that happen to be moving: correct, and
+# completely unreadable. 1:2 is the highest-order figure that still draws itself
+# at this instance count.
+18.0  Ratio X=0.25
+18.0  Ratio Y=0.50
+18.0..20.0  Count=0.52..1.0
+18.0..20.0  Size=0.60..0.39
+18.0..20.0  Path Size=0.50..0.62
+
+# Now push Ratio X a little off the whole number. The figure stops closing and
+# starts precessing, which is the claim the README makes about this control and
+# the one thing worth showing about it.
+20.0..26.0  Ratio X=0.25..0.32
+20.0..26.0  Speed=0.52..0.60
+
+# ----------------------------------------------------------- 26s: Drift
+# Bars crossing the frame at a heading. This is the wipe, and it is also what a
+# chase across a truss looks like from the pixel mapper's side.
+26.0  Path=2
+26.0  Shape=7
+26.0  Stretch=0.70
+26.0  Spin=0.50
+26.0  Count=0.42
+26.0  Size=0.60
+26.0  Path Size=0.62
+26.0  Direction=0.0
+26.0..32.0  Direction=0.0..0.14
+
+# ---------------------------------------------------------- 32s: Bounce
+# Scatter is the difference between one path many shapes are chasing round and
+# many shapes going their own way, so it ramps rather than cuts.
+32.0  Path=3
+32.0  Shape=1
+32.0  Stretch=0.50
+32.0  Roundness=0.20
+32.0  Outline=0.22
+32.0  Count=0.34
+32.0  Size=0.66
+32.0  Path Size=0.67
+32.0  Ratio X=0.55
+32.0  Ratio Y=0.62
+32.0..37.0  Scatter=0.0..0.85
+
+# ------------------------------------------------------- 37s: the pixel map
+# The payoff, and the reason the plugin exists. A fixture grid, one hue per
+# fixture, pulsing on the beat -- the shapes have stopped being graphics.
+37.0  Path=4
+37.0  Shape=0
+37.0  Outline=0.0
+37.0  Roundness=0.0
+37.0  Scatter=0.0
+37.0  Grid Columns=0.60
+37.0  Grid Rows=0.333
+37.0  Count=0.968
+37.0  Size=0.52
+37.0  Path Size=0.64
+37.0  Pulse Width=0.50
+37.0..40.0  Pulse Size=0.0..0.55
+37.0..40.0  Speed=0.60..0.52
+
+# Settle into a steady chase for the last few seconds rather than ending on a
+# transition -- the last frame is the one that gets used as a still.
+40.0..45.0  Pulse Size=0.55..0.42

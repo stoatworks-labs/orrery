@@ -14,6 +14,8 @@ Primitive shapes moving on deterministic paths, for [Resolume](https://resolume.
 Arena and Avenue, as a pair of FFGL plugins. For quick animated masks, and for
 chroma animations driving a pixel map.
 
+**Video:** [What it does, in 45 seconds](https://www.youtube.com/watch?v=4VJWYmGRwk8)
+
 ![Shapes on a Lissajous path, hue spread across the set](docs/hero.png)
 
 <sub>Twelve circles on a 3:2 Lissajous, hue spread across the set. Rendered by
