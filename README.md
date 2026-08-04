@@ -51,6 +51,8 @@ chroma animations driving a pixel map.
 
 All builds, checksums and release notes: [github.com/stoatworks-labs/orrery/releases](https://github.com/stoatworks-labs/orrery/releases).
 
+The Windows builds are unsigned, so SmartScreen warns once.
+
 <!-- downloads:end -->
 
 ## OpenFX — Resolve, Vegas, Nuke, Natron
