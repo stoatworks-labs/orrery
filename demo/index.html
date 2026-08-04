@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orrery — browser demo | Stoatworks Labs</title>
+    <meta name="description" content="Try the Orrery FFGL source and mask plugins for Resolume in your browser. The plugin's own shape SDFs and its closed-form motion solver, ported to WebGL2." />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./vendor/kit.css" />
+    <link rel="canonical" href="https://orrery-demo.stoatworks-labs.com/" />
+  </head>
+  <body>
+    <main id="demo">
+      <noscript>
+        <p>
+          This demo runs the plugin's shaders in your browser, so it needs
+          JavaScript and WebGL2. The plugin itself, its source and its downloads
+          are on
+          <a href="https://stoatworks-labs.com/software/orrery/">its project page</a>.
+        </p>
+      </noscript>
+    </main>
+
+    <script type="module" src="./plugin.js"></script>
+    <script
+      src="./vendor/support-footer.js"
+      defer
+      data-app="Orrery"
+      data-repo="https://github.com/stoatworks-labs/orrery"
+      data-note="A browser demo of the plugin's shaders. Nothing you load here leaves your machine."
+    ></script>
+  </body>
+</html>

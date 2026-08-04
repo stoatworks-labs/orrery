@@ -72,4 +72,13 @@ step "Dead controls"
 # The only thing that catches a uniform whose name does not match the C++.
 python3 tools/sweep.py --build "$(basename "$BUILD")"
 
+#---------------------------------------------------------------------------
+step "Browser demo"
+#---------------------------------------------------------------------------
+# demo/plugin.js carries this repo's shader text a second time, because a web
+# page cannot include a C++ file. A change to Shaders.cpp that is not mirrored
+# there is invisible until the demo behaves unlike the plugin, so compare them
+# character for character.
+python3 demo/tools/check_shaders.py
+
 printf '\n\033[32mall green\033[0m\n'
