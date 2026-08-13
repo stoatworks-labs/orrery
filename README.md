@@ -32,9 +32,9 @@ chroma animations driving a pixel map.
 
 | Build | Download | Size |
 | --- | --- | --- |
-| Universal (Apple Silicon + Intel) · .dmg disk image | [`orrery-1.0.0-macos-universal.dmg`](https://github.com/stoatworks-labs/orrery/releases/download/v1.0.0/orrery-1.0.0-macos-universal.dmg) | 590 KB |
-| Universal (Apple Silicon + Intel) · .zip archive | [`orrery-macos-universal.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-macos-universal.zip) | 308 KB |
-| Universal (Apple Silicon + Intel) · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`orrery-ofx-macos-universal.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-ofx-macos-universal.zip) | 238 KB |
+| Universal (Apple Silicon + Intel) · .dmg disk image | [`orrery-1.0.0-macos-universal.dmg`](https://github.com/stoatworks-labs/orrery/releases/download/v1.0.0/orrery-1.0.0-macos-universal.dmg) | 628 KB |
+| Universal (Apple Silicon + Intel) · .zip archive | [`orrery-macos-universal.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-macos-universal.zip) | 342 KB |
+| Universal (Apple Silicon + Intel) · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`orrery-ofx-macos-universal.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-ofx-macos-universal.zip) | 251 KB |
 
 </details>
 
