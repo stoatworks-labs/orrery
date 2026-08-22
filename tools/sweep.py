@@ -197,6 +197,13 @@ def parameters(ortest, effect):
         name = " ".join(parts[1:-2])
         found.append((name, kind))
 
+
+    # The About block is a text field and browser buttons, declared last. They
+    # never touch a pixel, so sweeping them only buries a real dead control.
+    for i, entry in enumerate(found):
+        if entry[0] == "About":
+            return found[:i]
+
     return found
 
 

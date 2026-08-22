@@ -11,6 +11,7 @@
         --shapes PATH     a contact sheet of all eight primitives
         --paths PATH      a contact sheet of all five paths
         --list            parameters, with their types and defaults
+      --presets         every factory preset survives every host behaviour
         --motion          where every shape landed, against Motion.cpp
         --round           circles stay round, and stay put, off 1:1
         --effect          render the effect variant over a test clip
@@ -1346,6 +1347,146 @@ int runSpeedTest()
 }
 
 
+//---------------------------------------------------------------------------
+/// Prove a factory preset survives whatever the host does next.
+///
+/// FFGL's host owns parameter state and is free to push it back down at any
+/// time, and nothing in the specification obliges it to act on the value
+/// events a plugin raises when it changes a parameter itself. So there are
+/// three hosts to survive, and the plugin cannot tell which one it is talking
+/// to:
+///
+///   - one that honours the events and hands the new values straight back;
+///   - one that ignores them and carries on restating the values it still
+///     believes in, which are the ones from before the preset;
+///   - one that honours them but keeps its parameters shorter than a float, so
+///     what comes back is near the preset rather than equal to it.
+///
+/// All three arrive as SetFloatParameter calls carrying a changed value, which
+/// is why "the value changed, so the operator must have taken over" is the
+/// wrong test. Resolume is the second kind, and against the unfixed code this
+/// fails in exactly that column -- reported as vertigo issue #2.
+///
+/// No GL here: this is the parameter plumbing, not the picture.
+//---------------------------------------------------------------------------
+int runPresetTest()
+{
+	using namespace orrery::presets;
+
+	int coveredCount            = 0;
+	const unsigned int* covered = OrreryPlugin::PresetParamIDsForTest( coveredCount );
+
+	enum class Host
+	{
+		Honours,
+		Ignores,
+		Quantises
+	};
+	struct HostCase
+	{
+		Host kind;
+		const char* name;
+	};
+	const HostCase hosts[] = {
+		{ Host::Honours, "honours value events" },
+		{ Host::Ignores, "ignores value events" },
+		{ Host::Quantises, "honours, 1/1000 steps" },
+	};
+
+	int failures = 0;
+
+	for( const HostCase& host : hosts )
+	{
+		for( int preset = 1; preset <= kCount; ++preset )
+		{
+			// The source build; the effect declares the same parameters.
+			OrreryPlugin plugin( false );
+
+			int presetIndex = -1;
+			for( unsigned int i = 0; i < plugin.GetNumParams(); ++i )
+			{
+				const char* declared = plugin.GetParamName( i );
+				if( declared != nullptr && std::strcmp( declared, "Preset" ) == 0 )
+				{
+					presetIndex = int( i );
+					break;
+				}
+			}
+			if( presetIndex < 0 )
+			{
+				std::fprintf( stderr, "presets: no parameter is called \"Preset\"\n" );
+				return 1;
+			}
+
+			// What the host thinks the sliders say before the operator reaches
+			// for the dropdown.
+			std::vector< float > hostOwn;
+			for( int j = 0; j < coveredCount; ++j )
+				hostOwn.push_back( plugin.GetFloatParameter( covered[ j ] ) );
+
+			// The operator picks a preset.
+			plugin.SetFloatParameter( unsigned( presetIndex ), float( preset ) );
+
+			// And now the host says its piece.
+			for( int j = 0; j < coveredCount; ++j )
+			{
+				float back = 0.0f;
+				switch( host.kind )
+				{
+				case Host::Honours:
+					back = plugin.GetFloatParameter( covered[ j ] );
+					break;
+				case Host::Ignores:
+					back = hostOwn[ size_t( j ) ];
+					break;
+				case Host::Quantises:
+					back = std::round( plugin.GetFloatParameter( covered[ j ] ) * 1000.0f ) / 1000.0f;
+					break;
+				}
+				plugin.SetFloatParameter( covered[ j ], back );
+			}
+
+			const int still = int( std::lround( plugin.GetFloatParameter( unsigned( presetIndex ) ) ) );
+			bool ok         = still == preset;
+
+			// Still selected is not enough -- it has to be what renders.
+			for( int j = 0; j < coveredCount; ++j )
+			{
+				const float want = kPresets[ preset - 1 ].v[ j ];
+				const float got  = plugin.GetFloatParameter( covered[ j ] );
+				ok               = ok && std::fabs( got - want ) <= 1e-4f;
+			}
+
+			if( !ok )
+			{
+				std::printf( "presets %-22s %-22s FAILED (shows %d)\n",
+				             host.name, kPresets[ preset - 1 ].name, still );
+				++failures;
+				continue;
+			}
+
+			// An operator turning a covered knob must still drop to Custom -- a
+			// preset that cannot be left is no better than one that will not
+			// stick. Move it somewhere neither the preset nor the host named.
+			const float moved = kPresets[ preset - 1 ].v[ 0 ] > 0.5f ? 0.123f : 0.877f;
+			plugin.SetFloatParameter( covered[ 0 ], moved );
+			const int after = int( std::lround( plugin.GetFloatParameter( unsigned( presetIndex ) ) ) );
+			if( after != 0 )
+			{
+				std::printf( "presets %-22s %-22s FAILED (an edit left it on %d)\n",
+				             host.name, kPresets[ preset - 1 ].name, after );
+				++failures;
+				continue;
+			}
+
+			std::printf( "presets %-22s %-22s ok\n", host.name, kPresets[ preset - 1 ].name );
+		}
+	}
+
+	std::printf( "%s\n", failures == 0 ? "presets: all ok" : "presets: FAILURES" );
+	return failures == 0 ? 0 : 1;
+}
+
 int main( int argc, char** argv )
 {
 	std::string outPath;
@@ -1405,6 +1546,8 @@ int main( int argc, char** argv )
 				height = std::stoi( size.substr( x + 1 ) );
 			}
 		}
+		else if( arg == "--presets" )
+			return runPresetTest();
 		else if( arg == "--list" )
 			wantList = true;
 		else if( arg == "--clock" )

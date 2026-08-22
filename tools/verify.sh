@@ -70,6 +70,7 @@ step "Checks"
 # rather than anything the renderer can show you.
 "$BUILD/ortest" --clock
 "$BUILD/ortest" --speed
+"$BUILD/ortest" --presets
 
 # --motion is the one that matters: it renders real frames and measures where
 # every shape actually landed against what Motion.cpp said. It exercises the
