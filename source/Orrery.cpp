@@ -1,6 +1,7 @@
 #include "Orrery.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <string>
 
@@ -75,6 +76,18 @@ void ApplyBlend( Blend blend )
 	}
 }
 
+
+/// Frames that must agree before the host's clock unit is settled.
+constexpr int kClockVotes = 4;
+
+/// Wall clock, to calibrate the host's against. Steady rather than system, so
+/// nothing here moves if the machine's clock is corrected.
+double wallSeconds()
+{
+	using namespace std::chrono;
+	static const steady_clock::time_point start = steady_clock::now();
+	return duration_cast< duration< double > >( steady_clock::now() - start ).count();
+}
 } // namespace
 
 OrreryPlugin::OrreryPlugin( bool overInput ) :
@@ -423,7 +436,10 @@ float OrreryPlugin::CurrentPhase() const
 	switch( sync )
 	{
 	case Sync::Free:
-		driven = static_cast< float >( hostSeconds ) * speed;
+		// Not `hostSeconds * speed`: see UpdatePhaseAnchor. Until the operator
+		// has moved Speed this is exactly that product, because the anchor
+		// starts at clock zero with phase zero.
+		driven = static_cast< float >( phaseAnchor + ( hostSeconds - anchorClock ) * speed );
 		break;
 
 	case Sync::Beat:
@@ -475,17 +491,137 @@ float OrreryPlugin::CurrentPhase() const
 //---------------------------------------------------------------------------
 void OrreryPlugin::UpdateClock()
 {
-	const double raw = hostTime;
-	if( clockScale == 0.0 && lastRawTime >= 0.0 && raw > lastRawTime )
+	// FFGL never says what unit SetTime arrives in, and hosts disagree:
+	// Resolume sends MILLISECONDS (measured live at 20.0 per frame at its
+	// 50 fps, and the SDK's own Particles sample divides by 1000), while the
+	// offline harness sends seconds. Reading it raw is a thousand times fast
+	// on the one host that matters and exactly right on the one that gets
+	// tested, which is how it stays hidden.
+	//
+	// This used to guess the unit from the magnitude of a single frame delta
+	// and then lock. That had three holes: a delta between 0.5 and 2.0 decided
+	// nothing, a burst of sub-0.5 ms frames at load -- a thumbnail render on a
+	// quick GPU -- locked it to "seconds" for the rest of the session, and
+	// while undecided it assumed seconds, which is precisely the millisecond
+	// host's wrong answer.
+	//
+	// So measure instead of guessing. steady_clock says how much real time
+	// passed, the host says how much host time passed, and the ratio names the
+	// unit outright. Nothing plausible sits between 1 and 1000, so both bands
+	// are wide and a frame fitting neither simply does not vote.
+	const double wallNow = wallSeconds();
+	if( wallStart < 0.0 )
+		wallStart = wallNow;
+
+	// Never read `hostTime` before the host has set it: CFFGLPlugin's
+	// constructor initialises bpm and barPhase and leaves hostTime
+	// uninitialised, so until SetTime lands it is whatever was in that memory.
+	const double raw = hostTimeSeen ? hostTime : -1.0;
+
+	if( clockScale == 0.0 && raw >= 0.0 && lastRawTime >= 0.0 && lastWallTime >= 0.0 )
 	{
-		const double d = raw - lastRawTime;
-		if( d >= 0.001 && d <= 0.5 )
-			clockScale = 1.0;
-		else if( d >= 2.0 && d <= 500.0 )
-			clockScale = 0.001;
+		const double hostDelta = raw - lastRawTime;
+		const double wallDelta = wallNow - lastWallTime;
+
+		// A paused host, a looping clip or a stalled frame tells us nothing.
+		if( hostDelta > 0.0 && wallDelta >= 0.0005 )
+		{
+			const double ratio = hostDelta / wallDelta;
+			if( ratio > 0.1 && ratio < 10.0 )
+				++secondsVotes;
+			else if( ratio > 100.0 && ratio < 10000.0 )
+				++millisVotes;
+
+			// Several frames rather than one, so a single odd frame -- the
+			// first after a seek, say -- cannot decide it on its own.
+			if( secondsVotes >= kClockVotes || millisVotes >= kClockVotes )
+			{
+				clockScale = millisVotes > secondsVotes ? 0.001 : 1.0;
+				diag::info( std::string( "host clock is " )
+				            + ( clockScale == 0.001 ? "milliseconds" : "seconds" )
+				            + ", scale=" + std::to_string( clockScale ) );
+			}
+		}
 	}
-	lastRawTime = raw;
-	hostSeconds = raw * ( clockScale == 0.0 ? 1.0 : clockScale );
+
+	if( raw >= 0.0 )
+		lastRawTime = raw;
+	lastWallTime = wallNow;
+
+	// Until the unit is settled -- and for a host that never calls SetTime at
+	// all -- run on the real clock. Wrong in origin but right in rate, where
+	// assuming seconds would be a thousand times fast on Resolume.
+	hostSeconds = ( raw >= 0.0 && clockScale != 0.0 ) ? raw * clockScale : wallNow - wallStart;
+}
+
+//---------------------------------------------------------------------------
+void OrreryPlugin::UpdatePhaseAnchor()
+{
+	const Sync sync   = static_cast< Sync >( Option( params[ PT_SYNC ], static_cast< int >( Sync::Count ) ) );
+	const float speed = SpeedFromParam( params[ PT_SPEED ] );
+
+	// Beat and Bar are meant to jump -- they re-lock to the transport, which is
+	// the point of them. Keep the anchor following the clock while they are
+	// selected so that returning to Free resumes rather than leaps.
+	if( sync != Sync::Free )
+	{
+		anchorClock = hostSeconds;
+		anchorSpeed = speed;
+		return;
+	}
+
+	// First frame: leave the anchor at clock zero, phase zero. That makes the
+	// expression above identical to the old `hostSeconds * speed` for as long
+	// as nobody touches Speed, which is what keeps every rendered-frame test
+	// and tools/sweep.py measuring the same thing they measured before.
+	if( anchorSpeed < 0.0f )
+	{
+		anchorSpeed = speed;
+		return;
+	}
+
+	if( speed != anchorSpeed )
+	{
+		// Once per speed change, not once per frame: this carries the exact
+		// phase forward rather than integrating it, so a long session cannot
+		// accumulate rounding into a drift. Frame rate still cannot affect
+		// where anything is.
+		phaseAnchor += ( hostSeconds - anchorClock ) * anchorSpeed;
+		anchorClock = hostSeconds;
+		anchorSpeed = speed;
+	}
+}
+
+FFResult OrreryPlugin::SetTime( double time )
+{
+	hostTimeSeen = true;
+	return CFFGLPlugin::SetTime( time );
+}
+
+void OrreryPlugin::SetClockScaleForTest( double scale )
+{
+	clockScale = scale;
+}
+
+void OrreryPlugin::TickClockForTest()
+{
+	UpdateClock();
+	UpdatePhaseAnchor();
+}
+
+double OrreryPlugin::ClockScaleForTest() const
+{
+	return clockScale;
+}
+
+float OrreryPlugin::CurrentPhaseForTest() const
+{
+	return CurrentPhase();
+}
+
+double OrreryPlugin::HostSecondsForTest() const
+{
+	return hostSeconds;
 }
 
 void OrreryPlugin::UpdateAudio()
@@ -602,6 +738,7 @@ void OrreryPlugin::Render( int width, int height, GLuint inputTexture, float max
 		return;
 
 	UpdateClock();
+	UpdatePhaseAnchor();
 	UpdateAudio();
 
 	const MotionParams motion = CurrentMotion( width, height );

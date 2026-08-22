@@ -118,9 +118,68 @@ private:
 	//---------------------------------------------------------------------
 	void UpdateClock();
 
-	double clockScale  = 0.0;///< 0 until decided; then 1.0 or 0.001
-	double lastRawTime = -1.0;
-	double hostSeconds = 0.0;
+	//---------------------------------------------------------------------
+	// Phase continuity across a Speed change.
+	//
+	// Placement stays a pure function of (index, phase) -- that is the whole
+	// design and none of it changes here. What changes is only which phase a
+	// given clock reading maps to.
+	//
+	// `phase = clock * speed` means a speed change moves the phase by
+	// `clock * delta`, and `clock` is however long the composition has been
+	// open. Nudging Speed an hour in is a jump of hundreds of cycles: every
+	// shape teleports, which is what issue #6 reported after the 1000x bug was
+	// out of the way. So remember the phase reached so far and count from
+	// there at the new rate.
+	//
+	// Free only. Beat and Bar deliberately keep jumping: their contract is
+	// that phase 0 lands on the bar line, and an offset that made a speed
+	// change seamless would slide the animation off the grid it exists to sit
+	// on. Nor is any of this in the OpenFX build -- that host renders
+	// arbitrary times in arbitrary order and can keyframe Speed, so a running
+	// anchor there would make a frame depend on which frames were rendered
+	// before it.
+	//---------------------------------------------------------------------
+	void UpdatePhaseAnchor();
+
+	double phaseAnchor = 0.0; ///< phase already reached at `anchorClock`
+	double anchorClock = 0.0; ///< the clock reading that phase belongs to
+	float anchorSpeed  = -1.0f;///< speed in force since then; < 0 until the first frame
+
+public:
+	FFResult SetTime( double time ) override;
+
+	//---------------------------------------------------------------------
+	// Clock test hooks.
+	//
+	// The offline harness DECLARES its unit rather than leaving UpdateClock to
+	// infer one. A single absolute time handed over in one frame is genuinely
+	// ambiguous -- 2.0 is two seconds or two milliseconds and nothing in it
+	// says which -- so inference is only possible against a live host's frame
+	// deltas. An implicit unit is what caused the bug these exist to keep
+	// fixed (issue #6).
+	//---------------------------------------------------------------------
+	void SetClockScaleForTest( double scale );
+	void TickClockForTest();
+	double ClockScaleForTest() const;
+	double HostSecondsForTest() const;
+
+	/// The phase the next frame would be drawn at. `--speed` needs it: the
+	/// thing being tested is that a speed change does NOT move the picture,
+	/// and reading the phase either side of one says so directly, where a
+	/// rendered-frame comparison would only say the two frames match.
+	float CurrentPhaseForTest() const;
+
+private:
+
+	double clockScale   = 0.0;///< 0 until decided; then 1.0 or 0.001
+	double lastRawTime  = -1.0;
+	double lastWallTime = -1.0;
+	double wallStart    = -1.0;
+	double hostSeconds  = 0.0;
+	int secondsVotes    = 0;
+	int millisVotes     = 0;
+	bool hostTimeSeen   = false;
 
 	//---------------------------------------------------------------------
 	// Audio.

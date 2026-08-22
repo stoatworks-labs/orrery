@@ -65,6 +65,12 @@ done
 #---------------------------------------------------------------------------
 step "Checks"
 #---------------------------------------------------------------------------
+# The clock and the speed anchor first: neither needs a GL context, both take a
+# couple of seconds, and both guard bugs an external user hit in the field
+# rather than anything the renderer can show you.
+"$BUILD/ortest" --clock
+"$BUILD/ortest" --speed
+
 # --motion is the one that matters: it renders real frames and measures where
 # every shape actually landed against what Motion.cpp said. It exercises the
 # solver, the uniform upload, the vertex transform, the aspect correction, the

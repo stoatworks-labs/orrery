@@ -45,11 +45,13 @@
 #include <zlib.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <map>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "Controls.h"
@@ -1089,7 +1091,10 @@ int renderSequence( const std::string& directory, const std::string& cuePath,
 		}
 
 		// The host clock and a steady 120bpm transport, so Sync has something
-		// real to lock to.
+		// real to lock to. Declare the unit: the harness renders as fast as
+		// the GPU allows, so the plugin's calibration -- which measures host
+		// time against real elapsed time -- has nothing to measure here.
+		plugin.SetClockScaleForTest( 1.0 );
 		plugin.SetTime( now );
 		plugin.SetBeatInfo( 120.0f, static_cast< float >( std::fmod( now / 2.0, 1.0 ) ) );
 
@@ -1128,6 +1133,8 @@ void usage()
 	        "  --shapes PATH     a contact sheet of all eight primitives\n"
 	        "  --paths PATH      a contact sheet of all five paths\n"
 	        "  --list            parameters, with their types and defaults\n"
+	        "  --clock           the host clock lands in seconds, whatever unit it speaks\n"
+	        "  --speed           a Speed change does not move the picture\n"
 	        "  --motion          where every shape landed, against Motion.cpp\n"
 	        "  --round           circles stay round, and stay put, off 1:1\n"
 	        "  --mask            each effect mask mode does what it says\n"
@@ -1144,6 +1151,201 @@ void usage()
 
 } // namespace
 
+//---------------------------------------------------------------------------
+/// Prove the host clock lands in seconds whatever unit the host speaks.
+///
+/// This is the gap that let a thousand-times-fast bug ship: every harness in
+/// the fleet drove SetTime in SECONDS, Resolume drives it in MILLISECONDS, so
+/// the path users actually run was the one path nothing exercised. The deltas
+/// below are fed in real time -- the calibration measures host time against a
+/// steady_clock, so a test that raced through them would measure nothing.
+//---------------------------------------------------------------------------
+int runClockTest()
+{
+	struct Case
+	{
+		const char* name;
+		double perFrame;///< what the host adds per frame
+		double expected;///< the scale it should settle on
+	};
+	const Case cases[] = {
+		{ "milliseconds (Resolume)", 20.0, 0.001 },
+		{ "seconds (harness)", 0.02, 1.0 },
+	};
+
+	int failures = 0;
+
+	for( const Case& c : cases )
+	{
+		OrreryPlugin plugin( false );
+		double host = 0.0;
+
+		// Twelve frames a real ~20 ms apart: comfortably more than the four
+		// agreeing frames the calibration asks for, and slow enough that the
+		// wall clock has something to measure.
+		for( int frame = 0; frame < 12; ++frame )
+		{
+			std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+			host += c.perFrame;
+			plugin.SetTime( host );
+			plugin.TickClockForTest();
+		}
+
+		const double scale = plugin.ClockScaleForTest();
+		const double secs  = plugin.HostSecondsForTest();
+
+		// Twelve frames of 20 ms is about 0.24 s of programme time whichever
+		// unit the host counts in. Loose bounds: the point is that it is not
+		// out by a factor of a thousand.
+		const bool scaleOk = std::abs( scale - c.expected ) < 1e-9;
+		const bool timeOk  = secs > 0.05 && secs < 1.0;
+
+		std::printf( "clock %-26s scale=%-6g seconds=%-8.4f %s\n",
+		             c.name, scale, secs, ( scaleOk && timeOk ) ? "ok" : "FAILED" );
+
+		if( !scaleOk )
+		{
+			std::fprintf( stderr, "  expected scale %g, got %g\n", c.expected, scale );
+			++failures;
+		}
+		if( !timeOk )
+		{
+			std::fprintf( stderr, "  %.4f s is not a plausible 0.24 s of clock\n", secs );
+			++failures;
+		}
+	}
+
+	// And the arithmetic itself: a declared millisecond host and a declared
+	// seconds host must put the clock in the same place for the same instant.
+	{
+		OrreryPlugin ms( false );
+		ms.SetClockScaleForTest( 0.001 );
+		ms.SetTime( 2500.0 );
+		ms.TickClockForTest();
+
+		OrreryPlugin sec( false );
+		sec.SetClockScaleForTest( 1.0 );
+		sec.SetTime( 2.5 );
+		sec.TickClockForTest();
+
+		const double a  = ms.HostSecondsForTest();
+		const double b  = sec.HostSecondsForTest();
+		const bool same = std::abs( a - b ) < 1e-9 && std::abs( a - 2.5 ) < 1e-9;
+		std::printf( "clock %-26s ms=%.4f seconds=%.4f %s\n",
+		             "2500ms == 2.5s", a, b, same ? "ok" : "FAILED" );
+		if( !same )
+			++failures;
+	}
+
+	std::printf( "%s\n", failures == 0 ? "clock: all ok" : "clock: FAILURES" );
+	return failures == 0 ? 0 : 1;
+}
+
+//---------------------------------------------------------------------------
+/// Prove a Speed change does not move the picture.
+///
+/// `phase = clock * speed` puts the shapes somewhere entirely new every time
+/// Speed is nudged, because `clock` is however long the composition has been
+/// open -- an hour in, a small nudge is hundreds of cycles. Issue #6's reporter
+/// hit it live: "the objects jump, almost as though they are restarting from a
+/// specific position", which is exactly what it looks like.
+///
+/// Phase is what places every instance, so reading it either side of the change
+/// says what happened directly. A rendered-frame comparison would only say the
+/// two frames matched, and an evenly spread chase has enough symmetries to
+/// match for the wrong reason (see AGENTS.md on phase periodicity).
+//---------------------------------------------------------------------------
+int runSpeedTest()
+{
+	int failures = 0;
+
+	auto check = [ &failures ]( const char* what, double got, double want, double tol ) {
+		const bool ok = std::abs( got - want ) <= tol;
+		std::printf( "speed %-34s got=%-12.6f want=%-12.6f %s\n", what, got, want, ok ? "ok" : "FAILED" );
+		if( !ok )
+			++failures;
+	};
+
+	// Slider positions, not cycles per second. 0.02 is the bottom of the live
+	// range and anything below it is the deliberate stopped zone.
+	struct Step
+	{
+		const char* name;
+		float slider;
+	};
+	const Step steps[] = {
+		{ "default -> 0.10 (slower)", 0.10f },
+		{ "0.10 -> 0.95 (much faster)", 0.95f },
+		{ "0.95 -> 0.00 (stopped)", 0.00f },
+		{ "0.00 -> 0.80 (running again)", 0.80f },
+	};
+
+	OrreryPlugin plugin( false );
+	plugin.SetClockScaleForTest( 1.0 );
+
+	// An hour in, which is where the old arithmetic hurt most and where a live
+	// operator actually is when they reach for the slider.
+	double host = 3600.0;
+	plugin.SetTime( host );
+	plugin.TickClockForTest();
+
+	// Untouched, the anchor must leave the old expression exactly as it was --
+	// this is what keeps tools/sweep.py and every rendered-frame test honest.
+	// The plugin's own default is asked for rather than written down here: a
+	// test that hard-codes it goes quietly wrong the day the default moves.
+	check( "untouched == clock * speed",
+	       plugin.CurrentPhaseForTest(),
+	       host * SpeedFromParam( plugin.GetFloatParameter( PT_SPEED ) ), 1e-3 );
+
+	for( const Step& step : steps )
+	{
+		const float before = plugin.CurrentPhaseForTest();
+
+		// The same instant, a new speed: nothing about the clock has moved, so
+		// nothing about the picture may either.
+		plugin.SetFloatParameter( PT_SPEED, step.slider );
+		plugin.TickClockForTest();
+		check( step.name, plugin.CurrentPhaseForTest(), before, 1e-3 );
+
+		// And then it must actually run at the new rate.
+		const float resumed = plugin.CurrentPhaseForTest();
+		host += 1.0;
+		plugin.SetTime( host );
+		plugin.TickClockForTest();
+		check( "  one second later", plugin.CurrentPhaseForTest() - resumed,
+		       SpeedFromParam( step.slider ), 1e-3 );
+	}
+
+	// Bar sync is deliberately NOT anchored: its contract is that phase 0 lands
+	// on the bar line, so it must still be the plain transport product. If the
+	// anchor ever leaks into it, beat sync stops meaning anything.
+	{
+		OrreryPlugin bar( false );
+		bar.SetClockScaleForTest( 1.0 );
+		bar.SetFloatParameter( PT_SYNC, static_cast< float >( Sync::Bar ) );
+		bar.SetBeatInfo( 120.0f, 0.25f );//120bpm: a bar is two seconds
+		bar.SetTime( 8.0 );
+		bar.TickClockForTest();
+		const float before = bar.CurrentPhaseForTest();
+
+		bar.SetFloatParameter( PT_SPEED, 0.95f );
+		bar.TickClockForTest();
+		const float after = bar.CurrentPhaseForTest();
+
+		// 4.25 bars in, so the phase is 4.25 * speed and the two speeds differ.
+		const bool jumped = std::abs( after - before ) > 1e-3;
+		std::printf( "speed %-34s %s\n", "Bar sync still re-locks", jumped ? "ok" : "FAILED" );
+		if( !jumped )
+			++failures;
+
+		check( "  Bar phase == bars * speed", after, 4.25 * SpeedFromParam( 0.95f ), 1e-3 );
+	}
+
+	std::printf( "%s\n", failures == 0 ? "speed: all ok" : "speed: FAILURES" );
+	return failures == 0 ? 0 : 1;
+}
+
+
 int main( int argc, char** argv )
 {
 	std::string outPath;
@@ -1154,6 +1356,8 @@ int main( int argc, char** argv )
 	std::vector< std::string > settings;
 
 	bool wantList   = false;
+	bool wantClock  = false;
+	bool wantSpeed  = false;
 	bool wantMotion = false;
 	bool wantRound  = false;
 	bool wantMask   = false;
@@ -1203,6 +1407,10 @@ int main( int argc, char** argv )
 		}
 		else if( arg == "--list" )
 			wantList = true;
+		else if( arg == "--clock" )
+			wantClock = true;
+		else if( arg == "--speed" )
+			wantSpeed = true;
 		else if( arg == "--motion" )
 			wantMotion = true;
 		else if( arg == "--round" )
@@ -1225,11 +1433,19 @@ int main( int argc, char** argv )
 	}
 
 	if( outPath.empty() && sequenceDir.empty() && shapesPath.empty() && pathsPath.empty()
-	    && !wantList && !wantMotion && !wantRound && !wantMask )
+	    && !wantList && !wantClock && !wantSpeed && !wantMotion && !wantRound && !wantMask )
 	{
 		usage();
 		return 2;
 	}
+
+	// Before any GL: neither of these touches the GPU, and a self-test that
+	// needed a context would not run on a CI box without one.
+	if( wantClock )
+		return runClockTest();
+
+	if( wantSpeed )
+		return runSpeedTest();
 
 	CGLContextObj context = createContext();
 	if( context == nullptr )
@@ -1288,6 +1504,7 @@ int main( int argc, char** argv )
 			// do something. Without this they are correctly inert -- a pinned
 			// phase ignores both -- and a dead-control sweep would report two
 			// working parameters as broken.
+			plugin.SetClockScaleForTest( 1.0 );//seconds, said out loud
 			plugin.SetTime( static_cast< double >( hostTime ) );
 			plugin.SetBeatInfo( 120.0f, 0.25f );
 		}
