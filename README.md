@@ -25,16 +25,16 @@ chroma animations driving a pixel map.
 
 ## Download
 
-**[v1.0.2](https://github.com/stoatworks-labs/orrery/releases/tag/v1.0.2)** — prebuilt for macOS and Windows. Pick your platform:
+**[v1.0.3](https://github.com/stoatworks-labs/orrery/releases/tag/v1.0.3)** — prebuilt for macOS and Windows. Pick your platform:
 
 <details>
 <summary><b>macOS</b> — Universal (Apple Silicon + Intel)</summary>
 
 | Build | Download | Size |
 | --- | --- | --- |
-| Universal (Apple Silicon + Intel) · .dmg disk image | [`orrery-1.0.2-macos-universal.dmg`](https://github.com/stoatworks-labs/orrery/releases/download/v1.0.2/orrery-1.0.2-macos-universal.dmg) | 637 KB |
-| Universal (Apple Silicon + Intel) · .zip archive | [`orrery-macos-universal.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-macos-universal.zip) | 352 KB |
-| Universal (Apple Silicon + Intel) · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`orrery-ofx-macos-universal.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-ofx-macos-universal.zip) | 254 KB |
+| Universal (Apple Silicon + Intel) · .dmg disk image | [`orrery-1.0.3-macos-universal.dmg`](https://github.com/stoatworks-labs/orrery/releases/download/v1.0.3/orrery-1.0.3-macos-universal.dmg) | 643 KB |
+| Universal (Apple Silicon + Intel) · .zip archive | [`orrery-macos-universal.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-macos-universal.zip) | 361 KB |
+| Universal (Apple Silicon + Intel) · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`orrery-ofx-macos-universal.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-ofx-macos-universal.zip) | 260 KB |
 
 </details>
 
@@ -43,9 +43,9 @@ chroma animations driving a pixel map.
 
 | Build | Download | Size |
 | --- | --- | --- |
-| x64 · .exe installer | [`orrery-1.0.2-windows-x86_64-setup.exe`](https://github.com/stoatworks-labs/orrery/releases/download/v1.0.2/orrery-1.0.2-windows-x86_64-setup.exe) | 217 KB |
-| x64 · .zip archive | [`orrery-windows-x86_64.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-windows-x86_64.zip) | 218 KB |
-| x64 · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`orrery-ofx-windows-x86_64.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-ofx-windows-x86_64.zip) | 73 KB |
+| x64 · .exe installer | [`orrery-1.0.3-windows-x86_64-setup.exe`](https://github.com/stoatworks-labs/orrery/releases/download/v1.0.3/orrery-1.0.3-windows-x86_64-setup.exe) | 221 KB |
+| x64 · .zip archive | [`orrery-windows-x86_64.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-windows-x86_64.zip) | 225 KB |
+| x64 · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`orrery-ofx-windows-x86_64.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-ofx-windows-x86_64.zip) | 79 KB |
 
 </details>
 
