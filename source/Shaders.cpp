@@ -126,6 +126,8 @@ uniform float Stretch;
 uniform float Roundness;
 uniform float Outline;
 uniform float Softness;
+uniform float Shade;
+uniform float LightAngle;
 uniform int SampleMode;
 
 #ifdef ORRERY_EFFECT
@@ -294,6 +296,62 @@ void main()
 		alpha = alpha * clip.a;
 	}
 #endif
+
+	//-----------------------------------------------------------------------
+	// Shading. Light the flat shape as though it had been inflated.
+	//
+	// The distance field already knows everything needed for a normal: how far
+	// inside the shape a pixel is, and -- through its gradient -- which way the
+	// nearest edge lies. In-plane at the rim, facing the viewer in the middle.
+	// For a circle that construction IS the sphere normal exactly, which is the
+	// shape the request was about; every other primitive gets the same
+	// treatment and reads as a pillow rather than a ball, because a pillow is
+	// what its field actually describes. A triangle inflates least of the
+	// eight, which is correct -- there is less of it to inflate.
+	//-----------------------------------------------------------------------
+	if( Shade > 0.001 )
+	{
+		// Central differences rather than fwidth: a screen-space derivative is
+		// one value per 2x2 quad, and these shapes are deliberately small, so
+		// the facets would be plainly visible.
+		const float h = 0.01;
+		float gx = shapeDistance( vec2( vLocal.x + h, vLocal.y ) / st )
+		         - shapeDistance( vec2( vLocal.x - h, vLocal.y ) / st );
+		float gy = shapeDistance( vec2( vLocal.x, vLocal.y + h ) / st )
+		         - shapeDistance( vec2( vLocal.x, vLocal.y - h ) / st );
+
+		vec2 g       = vec2( gx, gy );
+		float glen   = length( g );
+		vec2 outward = ( glen > 1e-6 ) ? g / glen : vec2( 0.0 );
+
+		// 1 at the rim, 0 at the deepest point inside. The reach is the shape's
+		// own unit radius carried through the stretch, so a squashed shape
+		// inflates by as much as it is wide rather than always by the same
+		// amount.
+		float reach = max( min( st.x, st.y ), 1e-4 );
+		float s     = clamp( 1.0 + d0 / reach, 0.0, 1.0 );
+
+		vec3 normal = vec3( outward * s, sqrt( max( 0.0, 1.0 - s * s ) ) );
+
+		// The y flip is because shape space runs y-down to match frame space:
+		// without it, raising the Light control walks the highlight the wrong
+		// way round the shape.
+		float a     = LightAngle * 6.28318531;
+		vec3 toLight = normalize( vec3( cos( a ), -sin( a ), 0.65 ) );
+
+		float lambert = max( dot( normal, toLight ), 0.0 );
+		// Not `half`: that is a reserved word in GLSL and the compiler's
+		// message about it is not a helpful one.
+		vec3 halfway  = normalize( toLight + vec3( 0.0, 0.0, 1.0 ) );
+		float spec    = pow( max( dot( normal, halfway ), 0.0 ), 24.0 );
+
+		// The ambient term is not politeness: these shapes are frequently the
+		// source for a pixel map, and a fixture that goes to black on the far
+		// side of the light reads as a dead channel rather than as shading.
+		vec3 lit = rgb * ( 0.35 + 0.75 * lambert ) + vec3( 0.5 * spec );
+
+		rgb = mix( rgb, lit, clamp( Shade, 0.0, 1.0 ) );
+	}
 
 	fragColor = vec4( rgb * alpha, alpha );
 }

@@ -51,6 +51,8 @@ constexpr const char* kParamStretch     = "stretch";
 constexpr const char* kParamRoundness   = "roundness";
 constexpr const char* kParamOutline     = "outline";
 constexpr const char* kParamSoftness    = "softness";
+constexpr const char* kParamShade       = "shade";
+constexpr const char* kParamLight       = "light";
 constexpr const char* kParamPath        = "path";
 constexpr const char* kParamSync        = "sync";
 constexpr const char* kParamSpeed       = "speed";
@@ -258,6 +260,8 @@ struct ShapeSetup
 	float roundness = 0.0f;
 	float outline   = 0.0f;
 	float softness  = 0.0f;
+	float shade     = 0.0f;
+	float light     = 0.25f;
 	float bound     = 1.05f;
 
 	float backR = 0, backG = 0, backB = 0, backA = 1;
@@ -396,6 +400,59 @@ public:
 						alpha = alpha * clipA;
 					}
 
+					//-------------------------------------------------------
+					// Shading, mirroring the block at the end of main() in
+					// kShapeFragmentShader. This is the second copy of the
+					// maths and it is here for the same reason shapeDistance
+					// is: the OpenFX build rasterises on the CPU, so there is
+					// no shader to borrow. Keep the two in step.
+					//-------------------------------------------------------
+					if( s.shade > 0.001f )
+					{
+						const float h  = 0.01f;
+						const float sx = std::max( s.stretch, 0.001f );
+
+						const float gx =
+							shapeDistance( s.shape, Vec2{ ( localX + h ) / sx, localY }, s.roundness )
+							- shapeDistance( s.shape, Vec2{ ( localX - h ) / sx, localY }, s.roundness );
+						const float gy =
+							shapeDistance( s.shape, Vec2{ localX / sx, localY + h }, s.roundness )
+							- shapeDistance( s.shape, Vec2{ localX / sx, localY - h }, s.roundness );
+
+						const float glen = std::sqrt( gx * gx + gy * gy );
+						const float ox   = glen > 1e-6f ? gx / glen : 0.0f;
+						const float oy   = glen > 1e-6f ? gy / glen : 0.0f;
+
+						const float reach = std::max( minSt, 1e-4f );
+						const float depth = std::clamp( 1.0f + d0 / reach, 0.0f, 1.0f );
+
+						const float nx = ox * depth;
+						const float ny = oy * depth;
+						const float nz = std::sqrt( std::max( 0.0f, 1.0f - depth * depth ) );
+
+						const float a  = s.light * 6.28318531f;
+						const float lx = std::cos( a );
+						const float ly = -std::sin( a );
+						const float lz = 0.65f;
+						const float ll = std::sqrt( lx * lx + ly * ly + lz * lz );
+
+						const float lambert = std::max( 0.0f, ( nx * lx + ny * ly + nz * lz ) / ll );
+
+						const float hx = lx / ll;
+						const float hy = ly / ll;
+						const float hz = lz / ll + 1.0f;
+						const float hl = std::sqrt( hx * hx + hy * hy + hz * hz );
+						const float spec =
+							std::pow( std::max( 0.0f, ( nx * hx + ny * hy + nz * hz ) / hl ), 24.0f );
+
+						const double gain = 0.35 + 0.75 * lambert;
+						const double add  = 0.5 * spec;
+
+						rgbR += s.shade * ( rgbR * gain + add - rgbR );
+						rgbG += s.shade * ( rgbG * gain + add - rgbG );
+						rgbB += s.shade * ( rgbB * gain + add - rgbB );
+					}
+
 					const double srcR = rgbR * alpha;
 					const double srcG = rgbG * alpha;
 					const double srcB = rgbB * alpha;
@@ -504,6 +561,8 @@ public:
 		roundness   = fetchDoubleParam( kParamRoundness );
 		outline     = fetchDoubleParam( kParamOutline );
 		softness    = fetchDoubleParam( kParamSoftness );
+		shade       = fetchDoubleParam( kParamShade );
+		light       = fetchDoubleParam( kParamLight );
 		path        = fetchChoiceParam( kParamPath );
 		sync        = fetchChoiceParam( kParamSync );
 		speed       = fetchDoubleParam( kParamSpeed );
@@ -789,6 +848,8 @@ private:
 		setup.roundness = float( roundness->getValueAtTime( t ) );
 		setup.outline   = float( outline->getValueAtTime( t ) );
 		setup.softness  = SoftnessFromParam( float( softness->getValueAtTime( t ) ) );
+		setup.shade     = std::clamp( float( shade->getValueAtTime( t ) ), 0.0f, 1.0f );
+		setup.light     = std::clamp( float( light->getValueAtTime( t ) ), 0.0f, 1.0f );
 		setup.bound     = ShapeBound( m.shape ) + setup.outline * 0.5f + setup.softness * 2.0f + 0.05f;
 
 		if( !over && backColour )
@@ -867,6 +928,8 @@ private:
 	OFX::DoubleParam* roundness    = nullptr;
 	OFX::DoubleParam* outline      = nullptr;
 	OFX::DoubleParam* softness     = nullptr;
+	OFX::DoubleParam* shade        = nullptr;
+	OFX::DoubleParam* light        = nullptr;
 	OFX::ChoiceParam* path         = nullptr;
 	OFX::ChoiceParam* sync         = nullptr;
 	OFX::DoubleParam* speed        = nullptr;
@@ -1025,6 +1088,10 @@ void describeParams( OFX::ImageEffectDescriptor& desc, bool maskVariant )
 	defineSlider( desc, page, kParamOutline, "Outline", "Stroke instead of fill.", 0.0 )
 		->setParent( *shapeGroup );
 	defineSlider( desc, page, kParamSoftness, "Softness", "Feathered edge. 0 is pixel-map hard.", 0.0 )
+		->setParent( *shapeGroup );
+	defineSlider( desc, page, kParamShade, "Shade", "Light the shape as though it were inflated. 0 is flat.", 0.0 )
+		->setParent( *shapeGroup );
+	defineSlider( desc, page, kParamLight, "Light", "Where the light comes from, one turn over the range.", 0.25 )
 		->setParent( *shapeGroup );
 
 	OFX::GroupParamDescriptor* motionGroup = desc.defineGroupParam( "Motion" );

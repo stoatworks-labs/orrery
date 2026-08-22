@@ -117,6 +117,11 @@ OrreryPlugin::OrreryPlugin( bool overInput ) :
 	params[ PT_OUTLINE ]   = 0.0f;
 	params[ PT_SOFTNESS ]  = 0.0f;
 
+	// Off, so an existing composition and every rendered test look exactly as
+	// they did. A shape with no shading is the null, byte for byte.
+	params[ PT_SHADE ]     = 0.0f;
+	params[ PT_LIGHT ]     = 0.25f;   // from the top of the frame
+
 	params[ PT_PATH ]       = static_cast< float >( Path::Orbit );
 	params[ PT_SYNC ]       = static_cast< float >( Sync::Free );
 	params[ PT_SPEED ]      = 0.521f;  // ~0.15 cycles per second
@@ -250,6 +255,9 @@ OrreryPlugin::OrreryPlugin( bool overInput ) :
 	SetParamInfof( PT_AUDIO_SIZE, "Audio Size", FF_TYPE_STANDARD );
 	SetParamInfof( PT_AUDIO_BRIGHT, "Audio Bright", FF_TYPE_STANDARD );
 
+	SetParamInfof( PT_SHADE, "Shade", FF_TYPE_STANDARD );
+	SetParamInfof( PT_LIGHT, "Light", FF_TYPE_STANDARD );
+
 	//-----------------------------------------------------------------------
 	// Groups. Thirty-odd parameters in one flat list is how somebody else's
 	// inspector stops being readable. SetParamGroup collapses *runs* of
@@ -269,6 +277,8 @@ OrreryPlugin::OrreryPlugin( bool overInput ) :
 	SetParamGroup( PT_PRESET, "Preset" );
 	for( unsigned int id = PT_AUDIO; id <= PT_AUDIO_BRIGHT; ++id )
 		SetParamGroup( id, "Audio" );
+	for( unsigned int id = PT_SHADE; id <= PT_LIGHT; ++id )
+		SetParamGroup( id, "Shading" );
 }
 
 //---------------------------------------------------------------------------
@@ -846,6 +856,8 @@ void OrreryPlugin::Render( int width, int height, GLuint inputTexture, float max
 		shapeShader.Set( "Roundness", Clamp01( params[ PT_ROUNDNESS ] ) );
 		shapeShader.Set( "Outline", outline );
 		shapeShader.Set( "Softness", softness );
+		shapeShader.Set( "Shade", Clamp01( params[ PT_SHADE ] ) );
+		shapeShader.Set( "LightAngle", Clamp01( params[ PT_LIGHT ] ) );
 		shapeShader.Set( "SampleMode", sampleMode );
 
 		if( overInput )

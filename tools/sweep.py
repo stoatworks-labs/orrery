@@ -94,6 +94,11 @@ CONTEXT = {
     # Over, Add and Max are the same picture unless shapes overlap at less than
     # full opacity.
     "Blend":        ["Count=0.8", "Size=0.9", "Opacity=0.5"],
+
+    # The light has nothing to light with the shading turned off, and a shape
+    # only a few pixels across has nowhere to put a gradient.
+    "Light":        ["Shade=1.0", "Count=0.05", "Size=0.9", "Path Size=0.0"],
+    "Shade":        ["Count=0.05", "Size=0.9", "Path Size=0.0"],
 }
 
 # Parameters that need the host clock running rather than a pinned phase.

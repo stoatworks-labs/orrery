@@ -58,6 +58,17 @@ If the instance count ever needs to reach into the thousands, *that* is when to
 reconsider — and the answer would be a buffer texture, not a second copy of the
 maths in GLSL.
 
+**Per-pixel maths is the exception, and there is now more of it.** Anything
+evaluated per *pixel* rather than per instance does have to exist twice, because
+the OpenFX build rasterises on the CPU and has no shader to borrow: the distance
+functions (`shapeDistance` in `source/ofx/OrreryOFX.cpp`, against the GLSL in
+`Shaders.cpp`) were the first, and the **Shade** normal and lighting added for
+issue #7 are the second. Both copies are marked as such. `--motion` will not
+catch them drifting — it measures where a shape landed, not what its interior
+did — so a change to either has to be made to both by hand, and the browser demo
+carries the GLSL a third time (`demo/tools/check_shaders.py` is what enforces
+*that* one, byte for byte).
+
 ---
 
 ## The traps

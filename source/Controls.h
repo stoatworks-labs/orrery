@@ -145,6 +145,12 @@ enum ParamId : unsigned int
 	PT_AUDIO_SIZE,
 	PT_AUDIO_BRIGHT,
 
+	// Shading. Appended for the same reason again: these arrived after v1.0.1
+	// shipped and belong beside Softness in the Shape group, but putting them
+	// there would renumber every id after them in every saved composition.
+	PT_SHADE,
+	PT_LIGHT,
+
 	PT_COUNT
 };
 

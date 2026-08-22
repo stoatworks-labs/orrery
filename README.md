@@ -127,7 +127,7 @@ the frame it happens and dies away like a meter rather than flickering.
 ![The eight primitives](docs/shapes.png)
 
 Circle, Square, Triangle, Hexagon, Star, Cross, Ring, Bar — each with
-**Roundness**, **Outline**, **Stretch** and **Softness**.
+**Roundness**, **Outline**, **Stretch**, **Softness** and **Shade**.
 
 `Softness` at zero gives a hard edge, which is what you want for pixel mapping: a
 feathered edge means a fixture sitting on the boundary reads a half-brightness
@@ -135,6 +135,14 @@ colour that was never in the design.
 
 `Roundness` sets corner rounding on everything except **Ring**, where it sets the
 ring's thickness.
+
+`Shade` lights the shape as though it had been inflated, with **Light** setting
+where the light comes from — one full turn over the slider, a quarter of the way
+up being straight down from the top. The normal is read out of the same distance
+field that draws the shape, so on a **Circle** it is exactly a sphere; the other
+primitives round the way their own field says they should, which makes a **Star**
+faceted and a **Triangle** barely domed at all. It is off by default, and a shape
+with `Shade` at zero renders exactly as it did before the control existed.
 
 ## Paths
 
@@ -190,7 +198,7 @@ them:
 | `ortest --motion` | 47 instances landed within 1.5 px of an independent prediction, across 5 paths and 4 aspect ratios |
 | `ortest --round` | circles stay round to 0.00% and correctly sized to 0.01%, at 1:1, 16:9, portrait and 2.39:1 |
 | `ortest --mask` | each of the 4 mask modes does what it says, measured inside a shape and outside it |
-| `tools/sweep.py` | all 41 parameters change the picture — no dead controls |
+| `tools/sweep.py` | all 46 parameters change the picture — no dead controls |
 
 What that does **not** cover: how the parameter groups land in Resolume's
 inspector, and whether `Bar` sync locks against a real transport. Both need the
