@@ -43,6 +43,14 @@ endif()
 
 option(ORRERY_BUILD_TOOLS "Build the offline render and measurement harness" ON)
 
+# The FFGL plugin, the FFGL SDK submodule and GLEW are one dependency group,
+# and the OpenFX plugin belongs to none of it. Turning this OFF builds the OFX
+# plugin alone, with no GL loader anywhere in the configure -- which is what
+# the Linux job does, because the FFGL SDK has no Linux path, and GLEW would
+# otherwise have to be installed to build something that never calls it.
+option(ORRERY_BUILD_FFGL "Build the FFGL plugin (needs the FFGL SDK and, off macOS, GLEW)" ON)
+
+if(ORRERY_BUILD_FFGL)
 # ---------------------------------------------------------------------------
 # The Resolume FFGL SDK, as a git submodule pinned to b1afaf9 -- the rev the
 # rest of the fleet pins. See AGENTS.md for what is wrong with it.
@@ -159,6 +167,8 @@ elseif(APPLE)
         CACHE PATH "" FORCE)
 endif()
 
+endif()  # ORRERY_BUILD_FFGL
+
 # ---------------------------------------------------------------------------
 # The OpenFX builds — both plugins in one bundle — for Resolve/Nuke/Natron/
 # Vegas. CPU render against the vendored OFX SDK subset under external/openfx
@@ -194,6 +204,15 @@ if(BUILD_OFX)
         PLUGIN_VERSION_MINOR=${PROJECT_VERSION_MINOR}
     )
 
+    # Threads, explicitly. The OFX Support library's multi-thread suite calls
+    # pthread_create, and on Rocky 8 -- glibc 2.28, the floor Resolve supports
+    # -- that still lives in libpthread; libpthread was only folded into libc in
+    # glibc 2.34. Leave it out and the plugin compiles, links, passes a symbol
+    # check and a glibc-version check, and then fails at dlopen with "undefined
+    # symbol: pthread_create". macOS and Windows never show it.
+    find_package(Threads REQUIRED)
+    target_link_libraries(OrreryOFX PRIVATE Threads::Threads)
+
     set(OFX_BUNDLE_DIR "${CMAKE_BINARY_DIR}/Orrery.ofx.bundle")
     set_target_properties(OrreryOFX PROPERTIES
         PREFIX ""
@@ -221,7 +240,9 @@ if(BUILD_OFX)
     endif()
 endif()
 
+if(ORRERY_BUILD_FFGL)
 install(TARGETS OrrerySource OrreryEffect
     LIBRARY DESTINATION "."
     BUNDLE  DESTINATION "."
 )
+endif()  # ORRERY_BUILD_FFGL
