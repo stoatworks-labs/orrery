@@ -1230,7 +1230,7 @@ mountDemo({
     { id: 'backG', name: 'Background_Green', type: 'colour', default: 0.0, group: 'Colour' },
     { id: 'backB', name: 'Background_Blue', type: 'colour', default: 0.0, group: 'Colour' },
     {
-      id: 'backOpacity', name: 'Background Opacity', type: 'standard', default: 1.0, group: 'Colour',
+      id: 'backOpacity', name: 'Background Alpha', type: 'standard', default: 1.0, group: 'Colour',
       display: pct,
       hint: 'Opaque black by default, which is what a mask wants. The source only — the effect lays down the clip instead.',
     },

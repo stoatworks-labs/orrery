@@ -1193,7 +1193,7 @@ void describeParams( OFX::ImageEffectDescriptor& desc, bool maskVariant )
 		backParam->setParent( *colourGroup );
 		page->addChild( *backParam );
 
-		defineSlider( desc, page, kParamBackOpacity, "Background Opacity",
+		defineSlider( desc, page, kParamBackOpacity, "Background Alpha",
 					  "Opaque black is what a mask wants; 0 draws on transparency.", 1.0 )
 			->setParent( *colourGroup );
 	}

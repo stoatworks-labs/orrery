@@ -59,7 +59,7 @@ SOURCE_ONLY = {
     "Background",
     "Background_Green",
     "Background_Blue",
-    "Background Opacity",
+    "Background Alpha",
 }
 
 # What else has to be true for a parameter to be able to do anything.

@@ -28,7 +28,7 @@
 0.0   Size=0.66
 0.0   Path Size=0.50
 0.0   Spread=1.0
-0.0   Background Opacity=1.0
+0.0   Background Alpha=1.0
 
 # Open on three and fill in, so the first thing the eye gets is a chase it can
 # count rather than a crowd.
