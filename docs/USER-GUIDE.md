@@ -32,8 +32,9 @@ Both plugins are in every download. Drop them into `~/Documents/Resolume Arena/E
 the Avenue equivalent) and restart Resolume. The macOS builds are Developer ID-signed and
 notarised; the Windows builds are unsigned, and only the installer trips SmartScreen.
 
-For OpenFX hosts, copy `Orrery.ofx.bundle` into `/Library/OFX/Plugins` (macOS) or
-`C:\Program Files\Common Files\OFX\Plugins` (Windows) — one bundle carries both plugins. It is the
+For OpenFX hosts, copy `Orrery.ofx.bundle` into `/Library/OFX/Plugins` (macOS),
+`C:\Program Files\Common Files\OFX\Plugins` (Windows) or `/usr/OFX/Plugins`
+(Linux) — one bundle carries both plugins. It is the
 identical motion, linking the same code the harness measures. There is no Audio group there; OFX
 hosts have no audio analysis.
 
