@@ -42,6 +42,13 @@ blend state.
 - Circles stay round off 1:1: `./build/ortest --round`
 - The four effect mask modes: `./build/ortest --mask`
 - No dead controls: `python3 tools/sweep.py`
+- **Before a release**, the shipped Windows artefact in a real Arena:
+  `../plugin-bench/arena/gate.sh orrery` — loads the actual `.dll` on the win-lab
+  VM and checks registration, the control surface the host sees, FFGL's
+  16-char name truncation, and that every control still moves the picture.
+  Takes minutes, needs the VM, and is deliberately NOT in `tools/verify.sh`.
+  Its expectation lives at `plugin-bench/arena/expect/orrery.json`, so a
+  deliberate change to the controls changes that file too.
 
 ## Notes
 - **An instance's placement is a pure function of (index, phase).** No simulation
