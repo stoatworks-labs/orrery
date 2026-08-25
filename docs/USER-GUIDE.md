@@ -14,9 +14,13 @@ animations driving a pixel map.
 > to 0.00% and correctly sized to 0.01% at 1:1, 16:9, portrait and 2.39:1; each of the 4 mask modes
 > was checked inside a shape and outside it; and all 46 parameters change the picture.
 >
-> **It has never been loaded into Resolume** — only compiled, rendered and measured offline. How
-> the parameter groups land in the inspector, and whether Bar sync locks against a real transport,
-> both need the host. Try it on a spare layer first.
+> **Both plugins load and run in Resolume Arena 7.27.1.** The shipped Windows build is checked
+> in a real Arena at every release: that each registers with the right name, uid and category,
+> that all 52 controls the host reports match the ones declared — name, order, type, range and
+> default — and that 42 of them demonstrably move the picture. That check runs on software
+> rendering, so it says nothing about an NVIDIA or AMD driver, and the machine has no sound
+> device, so the three audio-driven controls are unverified. Whether Bar sync locks against a
+> real transport still needs a real transport. Try it on a spare layer first.
 >
 > This codebase was created with AI assistance, directed and reviewed by a human author.
 
