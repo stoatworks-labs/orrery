@@ -6,9 +6,10 @@
 > headless GL context: it renders frames and measures where every shape actually
 > landed against an independent prediction, across five paths and four aspect
 > ratios, and separately checks each mask mode on the rendered picture (see
-> [Status](#status)). It has **never been loaded into Resolume** — only compiled,
-> rendered and measured offline. Check it in your own rig before trusting it in a
-> show.
+> [Status](#status)). Both plugins do load and run in Resolume Arena 7.27.1: the
+> shipped Windows build is checked in a real Arena at every release, on software
+> rendering and on a machine with no sound device. Check it in your own rig
+> before trusting it in a show.
 
 Primitive shapes moving on deterministic paths, for [Resolume](https://resolume.com)
 Arena and Avenue, as a pair of FFGL plugins. For quick animated masks, and for
@@ -198,9 +199,9 @@ submodule; on Windows, GLEW comes from vcpkg.
 
 ## Status
 
-**Verified offline, never run in Resolume.** `tools/verify.sh` builds universal,
-checks both bundles with `lipo` and `nm`, then renders real frames and measures
-them:
+**Measured offline, and checked in a real Arena at every release.**
+`tools/verify.sh` builds universal, checks both bundles with `lipo` and `nm`,
+then renders real frames and measures them:
 
 | Check | What it proves |
 |---|---|
@@ -209,9 +210,16 @@ them:
 | `ortest --mask` | each of the 4 mask modes does what it says, measured inside a shape and outside it |
 | `tools/sweep.py` | all 46 parameters change the picture — no dead controls |
 
-What that does **not** cover: how the parameter groups land in Resolume's
-inspector, and whether `Bar` sync locks against a real transport. Both need the
-host.
+Separately, the shipped Windows build is loaded into Resolume Arena 7.27.1 at
+every release: each plugin registers with the right name, uid and category, all
+52 controls the host reports match the ones declared — name, order, type, range
+and default — and 42 of them demonstrably move the picture.
+
+What that does **not** cover: that Arena check runs on software rendering, so it
+says nothing about an NVIDIA or AMD driver, and the machine has no sound device,
+so the three audio-driven controls are unverified. How the parameter groups land
+in Resolume's inspector has not been reviewed, and whether `Bar` sync locks
+against a real transport still needs a real transport.
 
 ## Diagnostics
 
