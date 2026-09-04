@@ -37,7 +37,7 @@ static CFFGLPluginInfo PluginInfo(
 	0,                                                  // Plugin major version number
 	1,                                                  // Plugin minor version number
 	FF_SOURCE,                                          // Plugin type
-	"Primitive shapes moving on deterministic paths",   // Plugin description
+	"Primitive shapes moving on deterministic paths.\n\nFor quick animated masks, and for chroma animations driving a pixel map.\n\nAn instance's placement is a pure function of its index and the phase. There is no simulation state anywhere, so nothing drifts with the frame rate and any frame renders on its own.\n\nStart from a Preset, at the bottom.",// Plugin description
 	"Orrery FFGL source"                                // About
 );
 
