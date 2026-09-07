@@ -358,7 +358,7 @@ void main()
 		vec3 toLight = normalize( vec3( cos( a ), -sin( a ), 0.65 ) );
 
 		float lambert = max( dot( normal, toLight ), 0.0 );
-		// Not `half`: that is a reserved word in GLSL and the compiler's
+		// Not "half": that is a reserved word in GLSL and the compiler's
 		// message about it is not a helpful one.
 		vec3 halfway  = normalize( toLight + vec3( 0.0, 0.0, 1.0 ) );
 		float spec    = pow( max( dot( normal, halfway ), 0.0 ), 24.0 );
