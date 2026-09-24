@@ -1064,6 +1064,10 @@ const pct = (v) => `${Math.round(v * 100)}%`;
 
 mountDemo({
   name: 'Orrery',
+  // The FFGL types this repo registers (EffectPlugin.cpp and SourcePlugin.cpp),
+  // for the kit banner's closing sentence, which said "effect" alone until
+  // 2026-09-24.
+  kind: ['effect', 'source'],
   pluginId: 'OR01',
   tagline: 'Primitive shapes on deterministic paths — for animated masks, and for driving a pixel map.',
   repo: 'https://github.com/stoatworks-labs/orrery',
