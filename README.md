@@ -71,6 +71,13 @@ The same effect also builds as an OpenFX plugin, so it runs in DaVinci Resolve
 (Edit and Color pages, and Fusion), Vegas Pro, Nuke and Natron. It is
 the identical motion — the OpenFX build links the same Motion.cpp the harness measures, and one bundle carries both plugins: the generator and Orrery Mask.
 
+**Fusion reports no frame rate; there, time-based controls assume 24 fps.**
+Resolve's Fusion page gives an OpenFX plugin no frame rate at all, and the first
+OpenFX builds failed every render there. Now Orrery falls back to 24, Resolve's
+default timeline rate, so in Fusion Free sync runs as if the composition were 24 fps
+whatever its real rate. A host that reports a rate, Resolve's Edit page included,
+gets its own.
+
 Grab the `orrery-ofx-*` zip for your platform from the release and copy
 `Orrery.ofx.bundle` (both plugins are in the one bundle) into the standard OpenFX folder, then restart the host:
 
