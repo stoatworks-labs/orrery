@@ -26,14 +26,14 @@ chroma animations driving a pixel map.
 
 ## Download
 
-**[v1.0.8](https://github.com/stoatworks-labs/orrery/releases/tag/v1.0.8)** — prebuilt for macOS, Windows and Linux. Pick your platform:
+**[v1.0.9](https://github.com/stoatworks-labs/orrery/releases/tag/v1.0.9)** — prebuilt for macOS, Windows and Linux. Pick your platform:
 
 <details>
 <summary><b>macOS</b> — Universal (Apple Silicon + Intel)</summary>
 
 | Build | Download | Size |
 | --- | --- | --- |
-| Universal (Apple Silicon + Intel) · .dmg disk image | [`orrery-1.0.8-macos-universal.dmg`](https://github.com/stoatworks-labs/orrery/releases/download/v1.0.8/orrery-1.0.8-macos-universal.dmg) | 414 KB |
+| Universal (Apple Silicon + Intel) · .dmg disk image | [`orrery-1.0.9-macos-universal.dmg`](https://github.com/stoatworks-labs/orrery/releases/download/v1.0.9/orrery-1.0.9-macos-universal.dmg) | 415 KB |
 | Universal (Apple Silicon + Intel) · .zip archive | [`orrery-macos-universal.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-macos-universal.zip) | 366 KB |
 | Universal (Apple Silicon + Intel) · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`orrery-ofx-macos-universal.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-ofx-macos-universal.zip) | 260 KB |
 
@@ -44,7 +44,7 @@ chroma animations driving a pixel map.
 
 | Build | Download | Size |
 | --- | --- | --- |
-| x64 · .exe installer | [`orrery-1.0.8-windows-x86_64-setup.exe`](https://github.com/stoatworks-labs/orrery/releases/download/v1.0.8/orrery-1.0.8-windows-x86_64-setup.exe) | 230 KB |
+| x64 · .exe installer | [`orrery-1.0.9-windows-x86_64-setup.exe`](https://github.com/stoatworks-labs/orrery/releases/download/v1.0.9/orrery-1.0.9-windows-x86_64-setup.exe) | 230 KB |
 | x64 · .zip archive | [`orrery-windows-x86_64.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-windows-x86_64.zip) | 228 KB |
 | x64 · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`orrery-ofx-windows-x86_64.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-ofx-windows-x86_64.zip) | 79 KB |
 
@@ -55,7 +55,7 @@ chroma animations driving a pixel map.
 
 | Build | Download | Size |
 | --- | --- | --- |
-| x64 · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`orrery-ofx-linux-x86_64.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-ofx-linux-x86_64.zip) | 720 KB |
+| x64 · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`orrery-ofx-linux-x86_64.zip`](https://github.com/stoatworks-labs/orrery/releases/latest/download/orrery-ofx-linux-x86_64.zip) | 721 KB |
 
 </details>
 
