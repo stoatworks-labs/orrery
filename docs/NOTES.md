@@ -13,11 +13,11 @@ Cross-cutting notes that are not specific to this repo live in
 
 **Orrery** — primitive shapes moving on deterministic paths, as **two** FFGL 2.1
 plugins for Resolume: `Orrery` (FF_SOURCE, ID `OY01`) and `Orrery Mask`
-(FF_EFFECT, ID `OY02`). C++17 + GLSL 4.1, CMake, `~/Projects/orrery`.
+(FF_EFFECT, ID `OY02`). C++17 + GLSL 4.1, CMake, `~/Projects/resolume/orrery`.
 
 Built and released 2026-08-03. **PUBLIC MIT at `stoatworks-labs/orrery`,
-now v1.0.5** (v0.2.0 Aug 3, v1.0.0 Aug 11, v1.0.1 Aug 18, v1.0.2 and v1.0.3 Aug 22,
-v1.0.4 and v1.0.5 Aug 25 2026), built in CI (macOS universal .dmg + .zip, Windows .exe installer +
+now v1.0.9** (v0.2.0 Aug 3, v1.0.0 Aug 11, v1.0.1 Aug 18, v1.0.2 and v1.0.3 Aug 22,
+v1.0.4 and v1.0.5 Aug 25, v1.0.6 Sep 2, v1.0.7 Sep 4, v1.0.8 Sep 20, v1.0.9 Oct 4 2026), built in CI (macOS universal .dmg + .zip, Windows .exe installer +
 .zip). All five release homes agree: repo, website page
 `stoatworks-labs.com/software/orrery/`, YouTube `4VJWYmGRwk8`, both embeds, and
 the download block. Instagram Reel `DblB3hUDLm4`. Both bundles are also

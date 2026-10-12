@@ -46,7 +46,8 @@ shapes in this page as it does in Resolume.
 
 ## Deploying
 
-From the repo root:
+A push to main deploys it (`.github/workflows/deploy.yml`, since 87ed7f3). By
+hand, from the repo root:
 
 ```bash
 cf-run npx wrangler deploy
