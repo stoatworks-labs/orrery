@@ -5,15 +5,16 @@
 > numerically by an offline harness that drives the real plugin class in a
 > headless GL context: it renders frames and measures where every shape actually
 > landed against an independent prediction, across five paths and four aspect
-> ratios, and separately checks each mask mode on the rendered picture (see
-> [Status](#status)). Both plugins do load and run in Resolume Arena 7.27.1: the
-> shipped Windows build is checked in a real Arena at every release, on software
+> ratios, and checks each mask mode on the rendered picture separately (see
+> [Status](#status)). Both plugins load and run in Resolume Arena 7.27.1: the
+> shipped Windows build goes through a real Arena at every release, on software
 > rendering and on a machine with no sound device. Check it in your own rig
-> before trusting it in a show.
+> before you trust it in a show.
 
 Primitive shapes moving on deterministic paths, for [Resolume](https://resolume.com)
-Arena and Avenue, as a pair of FFGL plugins. For quick animated masks, and for
-chroma animations driving a pixel map.
+Arena and Avenue, as a pair of FFGL plugins. They're for quick animated masks, and
+for chroma animations driving a pixel map, where you want the chase to land on the
+beat and still be on it at the end of the night.
 
 **Video:** [What it does, in 45 seconds](https://www.youtube.com/watch?v=4VJWYmGRwk8)
 
@@ -68,8 +69,9 @@ macOS builds are signed and notarised and open normally. The Windows builds are 
 ## OpenFX — Resolve, Vegas, Nuke, Natron
 
 The same effect also builds as an OpenFX plugin, so it runs in DaVinci Resolve
-(Edit and Color pages, and Fusion), Vegas Pro, Nuke and Natron. It is
-the identical motion — the OpenFX build links the same Motion.cpp the harness measures, and one bundle carries both plugins: the generator and Orrery Mask.
+(Edit and Color pages, and Fusion), Vegas Pro, Nuke and Natron. It's the same
+motion, because the OpenFX build links the same Motion.cpp the harness measures,
+and one bundle carries both plugins: the generator and Orrery Mask.
 
 **Resolve's Fusion page reports the frame rate on the effect but not on its clips.**
 The first OpenFX builds read a clip's rate, which Fusion leaves out, and failed
@@ -87,11 +89,11 @@ Windows  C:\Program Files\Common Files\OFX\Plugins\
 ```
 
 
-Both plugins are in every download — drop them into
+Both plugins are in every download: drop them into
 `~/Documents/Resolume Arena/Extra Effects` (or the Avenue equivalent) and restart
 Resolume. The macOS builds are Developer ID-signed and notarised, so they load
-with no Gatekeeper step; the Windows builds are unsigned and only the installer
-trips SmartScreen — see [docs/UNSIGNED.md](docs/UNSIGNED.md).
+with no Gatekeeper step; the Windows builds are unsigned, and only the installer
+trips SmartScreen (see [docs/UNSIGNED.md](docs/UNSIGNED.md)).
 
 ## Two plugins
 
@@ -116,25 +118,25 @@ bundles rather than one bundle with two entries. Both ship together.
 
 An instance's placement is a **pure function of (index, phase)**. Nothing is
 integrated frame by frame, so nothing accumulates error and nothing slows down
-when the show gets heavy — which matters when the output is driving a lighting
+when the show gets heavy, which matters when the output is driving a lighting
 rig rather than a screen.
 
 The same property is why beat sync costs nothing extra: phase is just a number,
 so `Sync` swaps the host clock for the host's bar position and the shapes lock to
 the track with no separate code path. Set it to `Manual` and the Phase parameter
-becomes the only driver — hand it to Resolume's own BPM-synced animation, a
-keyframe, or a MIDI fader.
+becomes the only driver, so you can hand it to Resolume's own BPM-synced
+animation, a keyframe or a MIDI fader.
 
 ## Audio
 
-The **Audio** group (FFGL only — OFX hosts have no audio analysis) takes
+The **Audio** group (FFGL only, as OFX hosts have no audio analysis) takes
 Resolume's FFT directly: pick an audio source on the `Audio` parameter, and
 every shape gets its own slice of the spectrum, low frequencies first.
 `Audio Size` grows each shape with its band; `Audio Bright` fades quiet shapes
 towards nothing. On a `Grid` with `Audio Bright` up, the shapes *are* a
-spectrum analyser — and because the bands arrive per instance, this is the one
-thing Resolume's own per-parameter audio link cannot do: that link moves one
-slider for the whole plugin, this moves sixty-four shapes independently.
+spectrum analyser. And because the bands arrive per instance, it does the one
+thing Resolume's own per-parameter audio link can't: that link moves one slider
+for the whole plugin, and this moves sixty-four shapes independently.
 
 The bands are smoothed fast-up, slow-down (~150 ms release), so a hit lands
 the frame it happens and dies away like a meter rather than flickering.
@@ -143,7 +145,7 @@ the frame it happens and dies away like a meter rather than flickering.
 
 ![The eight primitives](docs/shapes.png)
 
-Circle, Square, Triangle, Hexagon, Star, Cross, Ring, Bar — each with
+Circle, Square, Triangle, Hexagon, Star, Cross, Ring and Bar, each with
 **Roundness**, **Outline**, **Stretch**, **Softness** and **Shade**.
 
 `Softness` at zero gives a hard edge, which is what you want for pixel mapping: a
@@ -154,11 +156,11 @@ colour that was never in the design.
 ring's thickness.
 
 `Shade` lights the shape as though it had been inflated, with **Light** setting
-where the light comes from — one full turn over the slider, a quarter of the way
-up being straight down from the top. The normal is read out of the same distance
-field that draws the shape, so on a **Circle** it is exactly a sphere; the other
+where the light comes from (one full turn over the slider, with a quarter of the
+way up being straight down from the top). The normal is read out of the same
+distance field that draws the shape, so on a **Circle** it's exactly a sphere; the other
 primitives round the way their own field says they should, which makes a **Star**
-faceted and a **Triangle** barely domed at all. It is off by default, and a shape
+faceted and a **Triangle** barely domed at all. It's off by default, and a shape
 with `Shade` at zero renders exactly as it did before the control existed.
 
 ## Paths
@@ -173,7 +175,7 @@ with `Shade` at zero renders exactly as it did before the control existed.
 | **Bounce** | Reflection off the frame edges. Scatter detunes the axes per shape for independent wandering. |
 | **Grid** | Fixed positions on a grid. The animation is the pulse — made for pixel mapping onto a fixture layout. |
 
-**Spread** distributes the instances along the path in phase — that is what turns
+**Spread** distributes the instances along the path in phase, which is what turns
 a clump into a chase. **Scatter** blends that even spread towards a hashed one,
 from metronome to swarm.
 
@@ -188,8 +190,8 @@ from metronome to swarm.
 | **Hide** | The clip shows **everywhere except** the shapes. |
 | **Colourise** | The clip, tinted by the shape colour, inside the shapes. |
 
-Colourise needs a **Colour Mode** other than White to do anything visible —
-against a white shape colour it is arithmetically identical to Reveal.
+Colourise needs a **Colour Mode** other than White to do anything visible:
+against a white shape colour it's arithmetically identical to Reveal.
 
 ## Build
 
@@ -201,14 +203,14 @@ cmake --build build
 cmake --install build      # straight into Resolume's plugin folder
 ```
 
-Needs CMake 3.15+ and a C++17 compiler. The Resolume FFGL SDK comes in as a
+You'll need CMake 3.15+ and a C++17 compiler. The Resolume FFGL SDK comes in as a
 submodule; on Windows, GLEW comes from vcpkg.
 
 ## Status
 
 **Measured offline, and checked in a real Arena at every release.**
 `tools/verify.sh` builds universal, checks both bundles with `lipo` and `nm`,
-then renders real frames and measures them:
+then renders actual frames and measures them:
 
 | Check | What it proves |
 |---|---|
@@ -219,18 +221,18 @@ then renders real frames and measures them:
 
 Separately, the shipped Windows build is loaded into Resolume Arena 7.27.1 at
 every release: each plugin registers with the right name, uid and category, all
-52 controls the host reports match the ones declared — name, order, type, range
-and default — and 42 of them demonstrably move the picture.
+52 controls the host reports match the ones declared (name, order, type, range
+and default), and 42 of them demonstrably move the picture.
 
-What that does **not** cover: that Arena check runs on software rendering, so it
+What that **doesn't** cover: that Arena check runs on software rendering, so it
 says nothing about an NVIDIA or AMD driver, and the machine has no sound device,
-so the three audio-driven controls are unverified. How the parameter groups land
-in Resolume's inspector has not been reviewed, and whether `Bar` sync locks
+so the three audio-driven controls are unverified. I haven't reviewed how the
+parameter groups land in Resolume's inspector, and whether `Bar` sync locks
 against a real transport still needs a real transport.
 
 ## Diagnostics
 
-A shader that will not compile looks, from the outside, exactly like a plugin
+A shader that won't compile looks, from the outside, just like a plugin
 that does nothing. If that happens:
 
     ~/Library/Logs/orrery/orrery.YYYY-MM-DD.log
@@ -245,4 +247,4 @@ MIT — see [LICENSE](LICENSE).
 
 The distance functions are the standard analytic forms derived and published by
 [Inigo Quilez](https://iquilezles.org/articles/distfunctions2d/); the
-normalisation constants, and everything else here, are ours.
+normalisation constants, and everything else here, are this project's own.
