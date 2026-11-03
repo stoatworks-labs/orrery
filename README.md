@@ -18,6 +18,8 @@ beat and still be on it at the end of the night.
 
 **Video:** [What it does, in 45 seconds](https://www.youtube.com/watch?v=4VJWYmGRwk8)
 
+The [project page](https://stoatworks-labs.com/software/orrery/) has the downloads, the [user guide](https://stoatworks-labs.com/software/orrery/guide/), the video and the [browser demo](https://orrery-demo.stoatworks-labs.com/).
+
 ![Shapes on a Lissajous path, hue spread across the set](docs/hero.png)
 
 <sub>Twelve circles on a 3:2 Lissajous, hue spread across the set. Rendered by
